@@ -1,0 +1,239 @@
+
+initOutro:
+    
+    ;отрисуем заставку
+    ld de,menuTileSet : call setTileSet
+;    ld hl,outroMap : call drawMapInternal
+    ;DE: source address (compressed data)
+    ;BC: destination address (decompressing)
+    ld de,outroMap : ld bc,map : call dzx0
+    ld hl,map : call drawMapInternal
+
+     ld a,64 : call delay
+
+    call resetCamera
+
+	call mus_stop    
+    IFNDEF MUTE_MUSIC3
+    ld hl,finalMusic : call mus_init0	
+	;call mus_play		
+	ENDIF    
+    ld a,GS_OUTRO : ld (gameState),a            
+
+    ld hl,outroText : call initDynamicString
+    xor a : ld (wasSpaceKey+1),a
+    ld hl,cameraDownLUT : ld (mcdPointer+1),hl
+
+    ret
+
+doOutro:
+
+    call doDynamicString       
+
+
+wasSpaceKey:
+	ld a,0 : or a : jp z,1f	
+	dec a : ld (wasSpaceKey+1),a
+	or a : jp nz,7f	
+	jp initCredits
+1:
+
+    ld hl,(dynamicStringPointer+1) : ld a,(hl) : cp 255 : jp nz,2f        
+    
+    ld a,(keyFIRE) : or a :jp z,2f
+
+	IFNDEF MUTE_MUSIC3
+    	call mus_stop
+	ENDIF
+	ld hl,sfxClone : call playSFX	
+	ld a,64 : ld (wasSpaceKey+1),a        
+    jp 7f
+2:
+
+    IFNDEF MUTE_MUSIC3
+        call mus_play
+    ENDIF
+   
+    call processControls
+    call moveCameraDown            
+7:
+    
+    ; Звуковой движок
+	call doSounds
+    call doStars    
+
+    jp mainLoop
+
+
+outroText:           
+    db w,0*5,4*3,"                            ",254,254
+;    db y,0*5,4*3,"yt,j yfl gjctktybt gk.rjd",254,1
+;    db y,0*5,4*4,",skj ectzyyj pdtplfvb/// ",254,128
+    db w,0*5,4*3,"ds,hfdibcm bp cshjq gtoths",254,1
+    db w,0*5,4*4,"gk.r edbltk yjxyjt yt,j///",254,128+64
+    db w,0*5,4*3,"                              ",254,1
+    db w,0*5,4*4,"                              ",254,32
+    db w,0*5,4*3,"pdtpls nb[j vthwfkb<e,f.rbdfz",254,1
+    db w,0*5,4*4,";bntktq tuj hjlyjq lthtdyb///",254,128+64
+    db w,0*5,4*3,"                             ",254,1
+    db w,0*5,4*4,"                             ",254,254
+    db w,0*5,4*4,"                             ",254,254
+    db w,0*5,4*4,"                             ",254,128
+    db w,0*5,25*4,"rk.x jn ljvbrf kt;fk nfv ;t ",254,1
+    db w,0*5,26*4,"ult jy tuj b jcnfdbk///     ",254,128+64
+    db w,0*5,25*4,"                             ",254,1
+    db w,0*5,26*4,"                             ",254,1
+    db w,0*5,25*4,"gjl cnfhsv ldthysv rjdhbrjv  ",254,1
+    db w,0*5,26*4,"c gjkecnthnjq yflgbcm.///    ",254,128+64
+    db w,0*5,25*4,"                             ",254,1
+    db w,0*5,26*4,"                             ",254,1
+    db w,0*5,25*4+2,"     #pltcm ;bdtn gk.r!#     ",254,254
+    db y,13*5,21*4+0,0,254,1
+    db y,13*5,21*4+1,0,254,1
+    db y,13*5,21*4+2,0,254,1
+    db y,13*5,21*4+3,0,254,254
+    db y,13*5,21*4+3,0,254,254
+    db w,0*5,25*4+2,"                             ",254,1
+    db w,0*5,26*4,"                             ",254,1
+    db w,0*5,25*4,"pf dhtvz buhs ds ghbrjyxbkb  ",254,1
+    db w,0*5,26*4
+plukOld:    
+    db "00000 gk.rjd!                ",254,254
+    db w,0*5,25*4,"                             ",254,1
+    db w,0*5,26*4,"                             ",254,1
+    db w,0*5,25*4,"yj tcnm b [jhjibt yjdjcnb  ",254,1
+    db w,0*5,26*4,"ds yfgkjlbkb "    
+plukNew:    
+    db "00000 gk.rjd!   ",254,254
+    db w,0*5,25*4,"                          ",254,1
+    db w,0*5,26*4,"                          ",254,1
+;    db w,0*5,26*4," ",255
+    db 10000010b,12*5,14*4+2,"      ",254,1
+    db 10000010b,12*5,14*4+3,"      ",254,1
+    db 10000010b,12*5,14*4+4,"      ",254,1
+    db 10000010b,12*5,14*4+5,"      ",254,1
+    db 10000010b,12*5,14*4+2,"ghj,tk",255
+;cleanPressSpace:    
+;    db w,0*5,25*4+2,"                     ",255
+    
+
+   
+    
+killPluk:
+    push hl : push bc : push af    
+    ld hl,plukOld+4
+    ld b,1
+    call uscor  
+    pop af : pop bc : pop hl
+    ret
+
+bornPluk:
+    push hl : push bc : push af    
+    ld hl,plukNew+4
+    ld b,1
+    call uscor  
+    pop af : pop bc : pop hl
+    ret
+
+uscor:
+    ld a,(hl) ; current value of digit.
+    add a,b ; add points to this digit.
+    ld (hl),a ; place new digit back in string.
+    cp 58 ; more than ASCII value '9'?
+    ret c ; no - relax.
+    sub 10 ; subtract 10.
+    ld (hl),a ; put new character back in string.
+uscor0:
+    dec hl ; previous character in string.
+    inc (hl) ; up this by one.
+    ld a,(hl) ; what's the new value?
+    cp 58 ; gone past ASCII nine?
+    ret c ; no, scoring done.
+    sub 10 ; down by ten.
+    ld (hl),a ; put it back
+    jp uscor0 ; go round again.        
+    
+    
+    
+
+
+
+moveCameraDown:
+    ld a,0 : inc a : and 7 : ld (moveCameraDown+1),a
+    or a : ret nz
+mcdPointer:
+    ld hl,cameraDownLUT : ld e,(hl) : inc hl : ld d,(hl) : inc hl
+    ld a,d : cp 255 : ret z
+    ld (mcdPointer+1),hl
+    ex de,hl    
+    ld (videoADDR+1),hl
+    ret
+
+cameraDownLUT:
+N=0
+        dup 92+32;60
+        dw VIDEOMEM_ADDR+N*WIDTH
+        edup
+N=1        
+        dup 4
+        dw VIDEOMEM_ADDR+N*WIDTH
+        edup
+N=2        
+        dup 2
+        dw VIDEOMEM_ADDR+N*WIDTH
+        edup
+N=3        
+        dup 44
+        dw VIDEOMEM_ADDR+N*WIDTH
+N=N+1        
+        edup
+
+        dup 3
+        dw VIDEOMEM_ADDR+(N)*WIDTH
+        edup
+
+        dup 6
+        dw VIDEOMEM_ADDR+(N+1)*WIDTH
+        edup
+
+        db 255,255
+        
+
+starsPositions:
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*7+8*5
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*1+0*5   
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*2+6*5    
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*0+11*5
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*6+3*5
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*5+12*5
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*15+2*5
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*8+14*5    
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*10+1*5
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*12+7*5    
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*14+13*5   
+    dw VIDEOMEM_ADDR+LEFT_CHARS+WIDTH*4*18+11*5
+
+
+doStars:    
+N=0
+    dup 12
+    if (N<8)
+    ld a,N*2:
+    else
+    ld a,(N-8)*2:
+    endif
+    inc a : and 15 : ld ($-4),a
+    add 112
+    ld l,a : ld h,0 : add hl,hl : add hl,hl : push hl : add hl,hl : add hl,hl : ex de,hl : pop hl : add hl,de
+    ld bc,menuTileSet : add hl,bc : push hl : pop bc
+    ld hl,(starsPositions+N*2)
+    call drawTileLineInternal
+N=N+1    
+    edup
+    ret    
+
+outroMap:
+    incbin "maps\final.tmx.mapa.zx0"
+
+finalMusic:
+    incbin "music\final.psg.pack"

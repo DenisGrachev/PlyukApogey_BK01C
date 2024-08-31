@@ -1,0 +1,114 @@
+;Опросить клавиатуру через порты достаточно легко. Записывая поочерёдно 0 в один из разрядов порта А контроллера ВВ55, из порта В можно читать состояние одного ряда клавиш.
+;Если ничего не нажато, то возвращаются единицы. Если нажато, то на этих битах будут нули.
+;Например записав 0xFE по адресу 0x8000 опрашиваться будет ряд номер ноль. Прочитав байт из адреса 0x8001 получим состояние всех клавиш в этом ряду. В принципе, на Спектруме опрос происходит так же, только там порты не в памяти.
+;Записав в порт А 0x00 можно опросить сразу все линии и узнать нажата ли хоть какая-то клавиша.
+;
+;Код:
+;                       порт А вход									
+;0x7F    0xBF    0xDF    0xEF    0xF7    0xFB    0xFD    0xFE
+;7	6	5	4	3	2	1	0		
+;
+;SPACE	ВW	ОO	ГG	?/	7'	DOWN		7	
+;
+;Ч^	ЖV	НN	ФF	.>	6&	RIGHT	F4	6	
+;
+;Щ]	УU	МM	ЕE	-=	5%	UP	F3	5	
+;
+;Э\	ТT	ЛL	ДD	,<	4$	LEFT	F2	4	
+
+;порт В выход
+;
+;Ш[	СS	КK	ЦC	;+	3#	ЗБ	F1	3	
+;
+;ЗZ	РR	ЙJ	БB	:*	2"	ВК	АР2	2	
+;
+;ЫY	ЯQ	ИI	АA	9)	1/	ПС	СТР	1	
+;
+;ЬX	ПP	ХH	Ю@	8(	0	ТАБ	\	0
+
+
+keyprt0 = $ED00
+keyprt1 = $ED01
+
+keyUP: db 0
+keyDOWN: db 0
+keyLEFT: db 0
+keyRIGHT: db 0
+keyFIRE: db 0
+keyRESTART: db 0
+
+wasFireUp: db 0
+
+
+
+processControls:
+    ;reset states
+    ld hl,00000 : ld (keyUP),hl
+    ld hl,00000 : ld (keyLEFT),hl
+    ld hl,00000 : ld (keyFIRE),hl
+
+    ;at start of keys table
+    ld hl,keyUP
+
+    ld a,0xfd
+    ld (keyprt0),a
+ 	ld bc,keyprt1 :  ld a,(BC)    ;keyprt1	
+
+	;UP	
+    and 00100000b        
+	jp nz,1f
+    ld (hl),1
+1:    
+    inc hl
+
+	;DOWN
+	ld a,(BC)
+    and 10000000b        
+	jp nz,1f
+    ld (hl),1
+1:	
+    inc hl
+
+	;LEFT
+	ld a,(BC)
+    and 00010000b        
+	jp nz,1f
+    ld (hl),1
+1:	
+    inc hl 
+
+	;RIGHT
+	ld a,(BC)
+    and 01000000b        
+	jp nz,1f
+    ld (hl),1
+1:	
+    inc hl     
+
+    ;SPACE
+    ld a,0x7f
+    ld (keyprt0),a
+ 	ld bc,keyprt1 ;:  ld a,(BC)    ;keyprt1	
+
+    ;SPACE
+	ld a,(BC)
+    and 10000000b        
+	jp nz,1f
+    ld (hl),1
+    jp 2f
+1:	
+    ld a,1 : ld (wasFireUp),a
+2:
+    inc hl
+
+
+    ;RESTART TAB
+    ld a,0xfd
+    ld (keyprt0),a
+ 	ld bc,keyprt1
+	ld a,(BC)
+    and 00000001b        
+	jp nz,1f
+    ld (hl),1    
+1:
+	ret	

@@ -1,0 +1,310 @@
+initMenu:
+
+	;ld a,"B" : call drawLetter
+	;ld a,"L" : call drawLetter
+	;ld a,"Q" : call drawLetter
+
+	;ld hl,testString : call drawString
+
+	IFNDEF MUTE_MUSIC3
+    ld hl,menuMusic : call mus_init0	
+	call mus_play		
+	ENDIF
+
+	ld a,GS_MENU : ld (gameState),a	   	
+    ld hl,VIDEOMEM_ADDR : ld (videoADDR+1),hl	
+
+	;положим мигающий аттрибут для апаратного мигания
+	ld a,10000010b
+K=11*4	
+	dup 4
+N=4
+	dup 7
+	ld (VIDEOMEM_ADDR + LEFT_CHARS + K*WIDTH+N*5),a
+N=N+1	
+	edup
+K=K+1
+	edup
+	call processControls
+	xor a : ld (wasStart+1),a
+	ld hl,sinLUT : ld (sinPos+1),hl
+  	ld a,START_LEVEL : ld (currentLevel+1),a
+
+    jp mainLoop
+
+doMenu:
+
+    ;двигаем по бокам столбики
+	call moveRows		
+wasStart:
+	ld a,0 : or a : jp z,1f	
+	dec a : ld (wasStart+1),a
+	
+	or a : jp nz,2f
+	jp startStory
+	;ld a,GS_START_GAME : ld (gameState),a
+	;jp mainLoop
+1:	
+    ; играем музыку
+	IFNDEF MUTE_MUSIC3
+    call mus_play
+	ENDIF
+
+	ld a,(keyFIRE) : or a : jp z,2f
+
+	IFNDEF MUTE_MUSIC3
+	call mus_stop
+	ENDIF
+	ld hl,sfxClone : call playSFX	
+	ld hl,sinLUT2 : ld (sinPos+1),hl
+	ld a,64 : ld (wasStart+1),a
+2:
+	; Проверяем кнопки
+	call processControls
+;===================================================	
+	; применяем скролл
+	call menuSin
+;===================================================
+	;	
+	call doSounds
+    ; Назад в царь цикл	
+    jp mainLoop
+
+menuSin:
+	ld h, high cameraLUT
+menuScroll:	
+	ld a,0 : add a,a : ld l,a	
+	ld e,(hl) : inc l : ld d,(hl) : ex de,hl
+	ld (videoADDR+1),hl	
+sinPos:
+	ld hl,sinLUT : ld a,(hl) : inc l : ld (sinPos+1),hl : ld (menuScroll+1),a
+	ret
+
+	align 256
+sinLUT:
+	;dup 256/16	
+	;db 0,0,1,1,2,2,3,3,3,3,2,2,1,1,0,0
+	;edup
+
+	dup 256/8
+
+	db 0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,1,1,1,1,0,0,0,0
+
+	edup
+
+	align 256
+sinLUT2:
+	dup 256/16
+	;db 0,1,2,3,3,2,1,0
+	db 0,0,1,1,2,2,3,3,3,3,2,2,1,1,0,0
+	edup	
+
+menuMusic:	
+	incbin "music\music1.psg.pack"	
+menuTileSet:
+	incbin "maps\tilesetMenu.png.tls"	
+menuMap:	
+	incbin "maps\menu.tmx.mapa.zx0"	
+
+;g = 10000101b
+;r = 10001100b
+;b = 10001001b
+;w = 10000000b
+;c = 10000001b
+;m = 10001000b
+;n = 10001101b
+;y = 10000100b
+
+moveRows:	
+
+;mrATTR:
+;	ld hl,attrMask : dec l : ld (mrATTR+1),hl : ex hl,de
+;	ld hl,(videoADDR+1) : ld bc,LEFT_CHARS : add hl,bc	
+;drawRows:	
+;	ld bc,WIDTH-5
+;	dup 64
+;	ld a,(de) : ld (hl),a : inc e : inc hl : inc hl : inc hl : inc hl : inc hl : ld (hl),a
+;	add hl,bc
+;	edup
+
+	ld hl,000 : add hl,sp : ld (mrStack+1),hl
+
+mrATTR:
+	ld hl,attrMask : dec l : ld (mrATTR+1),hl : ex hl,de
+;	ld de,attrMask + 0
+
+
+	ld hl,(videoADDR+1) : ld bc,LEFT_CHARS : add hl,bc	
+
+
+	ld sp,dropLUT
+
+	dup 64
+	ld a,(de)
+	pop bc : add hl,bc : ld (hl),a
+	pop bc : add hl,bc : ld (hl),a
+	inc e
+	edup
+
+mrStack:	ld sp,00000
+
+	ret
+
+; как шагать по видео памяти
+	align 256
+dropLUT:				
+		dw 0
+		dw 70
+		dup 63
+		dw 14
+		dw 70
+		edup
+
+	align 256
+dropLUT2:				
+		dw 5
+		dw 70
+		dup 63
+		dw 14
+		dw 70
+		edup		
+
+		
+
+		
+
+	;маска для атрибуттов
+		align 256
+attrMask:		
+			dup 8
+
+			db n
+			db n
+			db n
+			db n
+			db n
+			db n
+			db n
+			db n
+			db c
+
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+
+			db n
+			db n
+			db n
+			db n
+			db n
+			db n
+			db n
+			db n
+			db c
+
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+
+
+			edup
+
+/*
+		jp moveRows0
+moveRows1:		
+		ld hl,attrMask : dec l : ld (moveRows1+1),hl : ex de,hl		
+		ld hl,moveRows0 : ld (moveRows+1),hl
+		
+		ld hl,00000 : add hl,sp : ld (drStack+1),hl
+		ld sp,dropLUT2		
+		jp drawRows
+moveRows0:
+		ld hl,attrMask : dec l : ld (moveRows0+1),hl : ex de,hl		
+		ld hl,moveRows1 : ld (moveRows+1),hl
+				
+		ld hl,00000 : add hl,sp : ld (drStack+1),hl
+		ld sp,dropLUT
+
+drawRows:		
+		;ld b,10001000b
+		dup 64
+		ld a,(de)
+		pop hl : ld (hl),a 
+		pop hl : ld (hl),a
+		inc e		
+		edup
+		;restore stack
+drStack: ld sp,00000
+		ret
+
+		;маска для атрибуттов
+		align 256
+attrMask:		
+			dup 8
+
+			db n
+			db n
+			db n
+			db n
+			db m
+			db n
+			db n
+			db n
+			db n
+
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+
+			db n
+			db n
+			db n
+			db n
+			db y
+			db n
+			db n
+			db n
+			db n
+
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+			db b
+
+
+			edup
+
+		align 256
+dropLUT:		
+N=0		
+		dup 64
+		dw VIDEOMEM_ADDR+LEFT_CHARS + N*WIDTH
+		dw VIDEOMEM_ADDR+LEFT_CHARS + N*WIDTH + 5
+N=N+1		
+		edup
+
+		align 256
+dropLUT2:		
+N=0		
+		dup 64
+		dw VIDEOMEM_ADDR + N*WIDTH + WIDTH - 11
+		dw VIDEOMEM_ADDR + N*WIDTH + 5  + WIDTH - 11
+N=N+1		
+		edup
+
+*/

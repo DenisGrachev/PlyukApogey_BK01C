@@ -1,0 +1,108 @@
+
+viCH = #b6-#80 ;0-й канал
+viADDR = #ec00 ;адрес 0 канала
+viCONTROL = #ec03 ;порт ви53
+
+;#ff - пустой фрейм
+;#fd - конец трека
+;#fe + byte - сколько фреймов ждать
+
+;состояниек канал вкл или выкл
+vCHt: db 0
+
+playMusic:
+musicPointer:    
+    ld hl,music0
+playMusicInternal:  
+    nop   
+playMusicWaitFrame:
+    ld a,0 : or a : jp z,1f
+    dec a : ld (playMusicWaitFrame+1),a : ret
+1:     
+ ;   inc hl : ld a,(hl) : dec hl
+    ld a,(hl)
+    cp #ff ;null frame
+    jp z,tryMute
+    cp #fe ;waitFrames
+    jp z,waitFrames
+    cp #fd 
+    jp z,loopMusic ; end music
+    ld a,(vCHt) : or a : jp nz,1f
+    ld  A,viCH        ;включить 0-й канал 
+    ld (viCONTROL),a    
+    ld (vCHt),a
+1:
+    ;reverse high low bytes order in format
+    ld  e,(hl)         ;    
+    ;ld (viADDR),a
+    inc hl
+    ld a,(hl)          ;    
+    ld (viADDR),a
+    inc hl    
+    ld a,e 
+    ld (viADDR),a
+
+    ld (musicPointer+1),hl
+    ret
+waitFrames:
+    inc hl : ld a,(hl) ;: inc hl : ld (musicPointer+1),hl
+    dec a : ld (playMusicWaitFrame+1),a ;текущий фрейм уже ждали поэтому -1
+    ;ret
+tryMute:
+    ; первый байт это команда
+    ;ld a,(hl) 
+    ;inc hl : inc hl : ld (musicPointer+1),hl    
+    ;cp #fe : jp z,loopMusic
+    inc hl : ld (musicPointer+1),hl
+    ld a,(vCHt) : or a : ret z ;jp z,1f
+    ld  A,viCH        ;выключить 2-й канал 
+    ld (viCONTROL),a    
+    xor a : ld (vCHt),a
+    ret
+;1:    
+;  ;  ld (soundPointer+1),hl : inc hl : inc hl : ld (soundPointer+1),hl
+;    ret
+
+stopMusic:
+    ld a,#c9 : ld (playMusicInternal),a
+    ld a,(vCHt) : or a : ret z ;jp z,1f
+    ld  A,viCH        ;выключить 2-й канал 
+    ld (viCONTROL),a    
+    xor a : ld (vCHt),a    
+    ret
+
+loopMusic:
+    ld hl,music0 : ld (musicPointer+1),hl : jp playMusic    
+
+
+initMusic:
+    ;   DE: source address (compressed data)
+;   BC: destination address (decompressing)
+    ex hl,de : ld bc,musicBuffer : call dzx0
+
+    ld hl,musicBuffer
+    ld  A,viCH        ;инит канал 
+    ld (viCONTROL),a      
+    xor a : ld (vCHt),a : ld (playMusicInternal),a
+    ;init sound pointer
+    ld (musicPointer+1),hl   
+    ;and loop point
+    ld (loopMusic+1),hl
+    ret
+
+;буффер размером с самый большой трек, можно туда трек из меню изначально положить а потом перетереть. Если без возврата в меню %)
+musicBuffer: 
+    block 2315,0
+
+music0:
+    incbin "music\gameplay0.psg.tinyRLE.zx0" 
+music1:
+    incbin "music\gameplay1.psg.tinyRLE.zx0" 
+music2:
+    incbin "music\gameplay2.psg.tinyRLE.zx0" 
+music3:
+    incbin "music\gameplay3.psg.tinyRLE.zx0"     
+music4:
+    incbin "music\gameplay4.psg.tinyRLE.zx0"     
+music6:
+    incbin "music\gameplay6.psg.tinyRLE.zx0"     

@@ -1,0 +1,310 @@
+
+TILE_START = 34*2
+
+TILE_BROKEN_BLOCK_01 = 116*2
+
+TILE_CLONE = 11*2
+TILE_DEAD = 20*2
+TILE_TELEPORT_DOOR = 42*2
+
+TILE_HIDDEN_BLOCK = 24*2
+TILE_BLOCK = 32*2
+
+TILE_LEFT = 36*2
+TILE_RIGHT = 40*2
+
+;e-x d-y
+; Просто вычисляем необходимые адреса в видео памяти
+calcTileXY:
+	ld h,high videoMemLUT
+	ld a,d : add a,a : ld l,a
+	ld a,(hl) : inc l : ld h,(hl) : ld l,a
+	ld d,0 :
+	 ;x5
+    ld a,e : add a,a : add a,a : add a,e : ld e,a
+	add hl,de
+	ret
+
+	
+;in BC addr of tile in HL videoMem	
+;drawTileInternal:
+;	;delta step
+;	ld de,WIDTH-4
+;	dup 3;y
+;	dup 4
+;	ld a,(bc) : ld (hl),a : inc bc : inc hl
+;	edup
+;	ld a,(bc) : ld (hl),a : inc bc
+;	;org $-2
+;	add hl,de
+;	edup
+;
+;	dup 4
+;	ld a,(bc) : ld (hl),a : inc bc : inc hl
+;	edup
+;	ld a,(bc) : ld (hl),a 
+;	ret
+;a - tilenum*2
+;e-x d-y
+drawTileXY:
+	;calculate tile addr by LUT table
+	;add a,a ;tilenum is premultiplied - limit for 128
+	ld l,a : ld h,high tilesLUT
+	ld c,(hl) : inc l : ld b,(hl)
+;IN BC - tile addr	
+drawTileNoCalcTileXY: 
+	ld h,high videoMemLUT
+	ld a,d : add a,a : ld l,a
+	ld a,(hl) : inc l : ld h,(hl) : ld l,a
+	ld d,0 :
+	 ;x5
+    ld a,e : add a,a : add a,a : add a,e : ld e,a
+	add hl,de	
+;in BC addr of tile in HL videoMem	
+drawTileInternal:
+	;delta step
+	ld de,WIDTH-4
+	dup 3;y
+	dup 4
+	ld a,(bc) : ld (hl),a : inc bc : inc hl
+	edup
+	ld a,(bc) : ld (hl),a : inc bc
+	;org $-2
+	add hl,de
+	edup
+
+	dup 4
+	ld a,(bc) : ld (hl),a : inc bc : inc hl
+	edup
+	ld a,(bc) : ld (hl),a 
+
+    ret
+
+;in BC addr of tile in HL videoMem	
+drawTileLineInternal:
+	;delta step
+	ld de,WIDTH-4
+	ld a,(bc) : ld (hl),a : inc bc : inc hl
+	ld a,(bc) : ld (hl),a 
+    ret
+
+
+/*
+;a - tilenum*2
+;e-x d-y
+drawTileXY:
+	ld c,a
+	ld h,high videoMemLUT
+	ld a,d : add a,a : ld l,a
+	ld a,(hl) : inc l : ld h,(hl) : ld l,a
+	ld d,0 :
+	 ;x5
+    ld a,e : add a,a : add a,a : add a,e : ld e,a
+	add hl,de
+	ld a,c
+;hl-addr
+;a-tile num x 2
+drawTile:    
+	push hl
+	;calculate tile addr by LUT table
+	;add a,a ;tilenum is premultiplied - limit for 128
+	ld l,a : ld h,high tilesLUT
+	ld e,(hl) : inc l : ld d,(hl)
+	pop hl
+;in DE addr of tile in HL videoMem	
+drawTileInternal:
+	;delta step
+	ld bc,WIDTH-4
+	dup 3;y
+	dup 4
+	ld a,(de) : ld (hl),a : inc de : inc hl
+	edup
+	ld a,(de) : ld (hl),a : inc de
+	;org $-2
+	add hl,bc
+	edup
+
+	dup 4
+	ld a,(de) : ld (hl),a : inc de : inc hl
+	edup
+	ld a,(de) : ld (hl),a 
+    ret 
+*/	
+
+;de - tileset addr
+; Устанавливаем тайлсет для отрисовки тайлмапы
+setTileSet:	
+	ld bc,20;размер тайла
+	ld hl,tilesLUT ;лут для тайлов
+	ld a,128
+1:
+	ld (hl),e : inc hl : ld (hl),d : inc hl
+	;Прибавляем размер тайлика
+	push hl
+	ex de,hl : add hl,bc : ex hl,de
+	pop hl
+	;
+	dec a : jp nz,1b
+	ret
+
+	align 256
+videoMemLUT:
+N=0
+	dup HEIGHT
+		dw VIDEOMEM_ADDR + LEFT_CHARS + 4*N*WIDTH
+N=N+1		
+	edup
+	dup 128-HEIGHT
+		dw VIDEOMEM_TMP_BUFFER
+	edup
+
+    align 256    
+
+tilesLUT:
+N=0	
+	dup 128
+	dw tileSet + N*20
+N=N+1	
+	edup
+
+COL_NULL 	 = 0
+COL_SOLID 	 = 1
+COL_PLATFORM = 2
+COL_DEAD 	 = 3
+; Таблица коллизий
+    align 256
+collisionLUT:
+	db COL_NULL,COL_NULL ;0 tile
+	db COL_SOLID,COL_SOLID ;1 tile
+	db COL_SOLID,COL_SOLID;2
+	db COL_PLATFORM,COL_PLATFORM;3
+	db COL_DEAD,COL_DEAD;4
+	db COL_DEAD,COL_DEAD;5
+	db COL_NULL,COL_NULL;6
+	db COL_NULL,COL_NULL;7
+	db COL_NULL,COL_NULL;8
+	db COL_NULL,COL_NULL;9
+	db COL_NULL,COL_NULL;10
+	db COL_SOLID,COL_SOLID;11 clone
+	db COL_SOLID,COL_SOLID;12
+	db COL_SOLID,COL_SOLID;13
+	db COL_NULL,COL_NULL;14
+	db COL_NULL,COL_NULL;15
+	db COL_SOLID,COL_SOLID;16
+	db COL_SOLID,COL_SOLID;17
+	db COL_NULL,COL_NULL;18
+	db COL_NULL,COL_NULL;19
+	db COL_SOLID,COL_SOLID;20 ; DEAD PLYK
+	db COL_NULL,COL_NULL;21
+	db COL_NULL,COL_NULL;22
+	db COL_NULL,COL_NULL;23
+	db COL_NULL,COL_NULL;24 HIDDEN_BLOCK
+	db COL_NULL,COL_NULL;25
+	db COL_NULL,COL_NULL;26
+	db COL_NULL,COL_NULL;27
+	db COL_NULL,COL_NULL;28
+	db COL_NULL,COL_NULL;29
+	db COL_NULL,COL_NULL;30
+	db COL_NULL,COL_NULL;31
+	db COL_SOLID,COL_SOLID;32 SHOW BLOCK
+	db COL_NULL,COL_NULL;33
+	db COL_NULL,COL_NULL;34
+	db COL_NULL,COL_NULL;35
+	db COL_NULL,COL_NULL;36
+	db COL_NULL,COL_NULL;37
+	db COL_NULL,COL_NULL;38
+	db COL_NULL,COL_NULL;39
+	db COL_NULL,COL_NULL;40
+	db COL_NULL,COL_NULL;41
+	db COL_NULL,COL_NULL;42
+	db COL_NULL,COL_NULL;43
+	db COL_NULL,COL_NULL;44
+	db COL_NULL,COL_NULL;45
+	db COL_NULL,COL_NULL;46
+	db COL_NULL,COL_NULL;47
+	db COL_NULL,COL_NULL;48
+	db COL_NULL,COL_NULL;49
+	db COL_NULL,COL_NULL;50
+	db COL_SOLID,COL_SOLID;51
+	db COL_NULL,COL_NULL;52
+	db COL_NULL,COL_NULL;53
+	db COL_NULL,COL_NULL;54
+	db COL_SOLID,COL_SOLID;55
+	db COL_NULL,COL_NULL;56
+	db COL_NULL,COL_NULL;57
+	db COL_NULL,COL_NULL;58
+	db COL_NULL,COL_NULL;59
+	db COL_NULL,COL_NULL;60
+	db COL_NULL,COL_NULL;61
+	db COL_NULL,COL_NULL;62
+	db COL_NULL,COL_NULL;63
+	db COL_NULL,COL_NULL;64
+	db COL_NULL,COL_NULL;65
+	db COL_NULL,COL_NULL;66
+	db COL_NULL,COL_NULL;67
+	db COL_NULL,COL_NULL;68
+	db COL_NULL,COL_NULL;69
+	db COL_NULL,COL_NULL;70
+	db COL_NULL,COL_NULL;71
+	db COL_NULL,COL_NULL;72
+	db COL_NULL,COL_NULL;73
+	db COL_NULL,COL_NULL;74
+	db COL_NULL,COL_NULL;75
+	db COL_NULL,COL_NULL;76
+	db COL_NULL,COL_NULL;77
+	db COL_NULL,COL_NULL;78
+	db COL_NULL,COL_NULL;79
+	db COL_NULL,COL_NULL;80
+	db COL_NULL,COL_NULL;81
+	db COL_NULL,COL_NULL;82
+	db COL_NULL,COL_NULL;83
+	db COL_NULL,COL_NULL;84
+	db COL_NULL,COL_NULL;85
+	db COL_NULL,COL_NULL;86
+	db COL_NULL,COL_NULL;87
+	db COL_NULL,COL_NULL;88
+	db COL_NULL,COL_NULL;89
+	db COL_NULL,COL_NULL;90
+	db COL_NULL,COL_NULL;91
+	db COL_NULL,COL_NULL;92
+	db COL_NULL,COL_NULL;93
+	db COL_NULL,COL_NULL;94
+	db COL_NULL,COL_NULL;95
+	db COL_NULL,COL_NULL;96
+	db COL_NULL,COL_NULL;97
+	db COL_NULL,COL_NULL;98
+	db COL_NULL,COL_NULL;99
+	db COL_NULL,COL_NULL;100
+	db COL_NULL,COL_NULL;101
+	db COL_NULL,COL_NULL;102
+	db COL_NULL,COL_NULL;103
+	db COL_NULL,COL_NULL;104
+	db COL_NULL,COL_NULL;105
+	db COL_NULL,COL_NULL;106
+	db COL_NULL,COL_NULL;107
+	db COL_NULL,COL_NULL;108
+	db COL_NULL,COL_NULL;109
+	db COL_NULL,COL_NULL;110
+	db COL_NULL,COL_NULL;111
+	db COL_NULL,COL_NULL;112
+	db COL_NULL,COL_NULL;113
+	db COL_NULL,COL_NULL;114
+	db COL_NULL,COL_NULL;115
+	db COL_SOLID,COL_SOLID;116
+	db COL_SOLID,COL_SOLID;117
+	db COL_SOLID,COL_SOLID;118
+	db COL_SOLID,COL_SOLID;119
+	db COL_SOLID,COL_SOLID;120
+	db COL_SOLID,COL_SOLID;121
+	db COL_SOLID,COL_SOLID;122
+	db COL_SOLID,COL_SOLID;123
+	db COL_SOLID,COL_SOLID;124
+	db COL_SOLID,COL_SOLID;125
+	db COL_SOLID,COL_SOLID;126
+	db COL_NULL,COL_NULL;127
+
+	
+	
+
+tileSet:	
+    incbin "maps/tileSet.png.tls"

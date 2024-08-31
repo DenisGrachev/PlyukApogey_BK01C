@@ -1,0 +1,271 @@
+
+
+MAP_WIDTH = 16
+MAP_HEIGHT = 24
+MAX_LEVEL = 21
+
+
+
+
+initMap:
+    ; выключаем экран
+    call disableRender        
+
+    ; Конец игры
+    ld a,(currentLevel+1) : cp MAX_LEVEL : jp z,initOutro
+
+     IFNDEF MUTE_MUSIC
+        ld a,(currentLevel+1) : add a,a : ld l,a : ld h,high mapMusic : ld a,(hl) : inc l : ld h,(hl) : ld l,a
+		call initMusic
+	 ENDIF
+
+    ; сбрасываем всё на дефолт
+    call resetAnimationSystem
+    call resetCamera
+    call resetClones
+    call resetHero
+    call resetKeys
+    call resetSpriteSystem    
+
+    
+
+
+    ;копируем карту в рабочий буффер
+currentLevel:
+    ld a,START_LEVEL
+    add a,a : ld h,high maps : ld l,a : ld a,(hl) : inc l : ld h,(hl) : ld l,a
+    call copyMap
+    ;ld hl,map01 : call copyMap
+
+    ; Стартовые координаты героя в конце карты
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT) : ld (heroCellXY+1),hl
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+2) : ld (heroPixelCoords+1),hl    
+
+    ; Рисуем уровень в видео памяь
+    call drawMap
+
+    ; Включаем экран
+	;call enableRender	
+
+    ; Ключи
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+04) : call addKeyXY
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+06) : call addKeyXY
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+08) : call addKeyXY
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+10) : call addKeyXY
+
+    ld a,(map+MAP_WIDTH*MAP_HEIGHT+12) : ld (totalKeys),a
+
+    ; Двери телепорты
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15) : call addTeleportDoor
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+17) : call addTeleportDoor
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+19) : call addTeleportDoor
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+21) : call addTeleportDoor
+    
+    
+
+    ret
+
+drawMap:
+    ld hl,map
+drawMapInternal:
+    ld de,0
+
+    ;dup MAP_HEIGHT;y
+    ld a,MAP_HEIGHT
+dmLine:    
+    ld (dmCounter+1),a
+    push de
+    dup MAP_WIDTH-1
+;    ld a,MAP_WIDTH-1
+;dwChar:       
+;    push af
+    push de : push hl : ld a,(hl) : call drawTileXY : pop hl : pop de
+    inc e : inc hl
+ ;   pop af
+;    dec a : jp nz,dwChar
+    edup
+    inc e : inc hl
+    
+    pop de
+    inc d
+dmCounter:  ld a,1
+    dec a : jp nz,dmLine
+
+    ;edup
+    
+    ret
+
+;IN de, l=x h=y
+;IN a-tile to put
+putTileXY:
+    ld e,l : ld d,a
+
+    ld a,h  : add a,a : ld h,high mapLines : ld l,a
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a
+
+    ld a,d : ld d,0
+    add hl,de 
+
+    ld (hl),a    
+    ret
+
+;IN hl, l=x h=y
+getTileXY:
+    ld e,l : ld d,0
+    ld a,h  : add a,a : ld h,high mapLines : ld l,a
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a
+    add hl,de 
+
+    ld a,(hl)
+    
+;    ld h, high mapLines : ld a,d : add a,a : ld l,a
+;    ld a,(hl) : inc l : ld h,(hl) : ld l,a
+;
+;    ld a,d : ld d,0 : add hl,de : ld d,a ;save and restore d to save coords
+;    ld a,(hl)
+;    ;OUT a-tile HL map ADDR
+    ret
+
+; IN hl, l=x h=y
+; Получает тип тайла для коллизий из карты
+getTileTypeXY:
+
+    ld e,l : ld d,0
+
+    ld a,h  : add a,a : ld h,high mapLines : ld l,a
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a
+
+    add hl,de 
+
+    ld l,(hl) : ld h, high collisionLUT : ld a,(hl)
+
+    ;OUT a-tile TYPE
+    ret    
+
+;IN de, e=x d=y
+getTilePixelsXY:
+    ld h, high mapLines : ld a,d : add a,a : ld l,a
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a
+
+    ld a,d : ld d,0 : add hl,de : ld d,a ;save and restore d to save coords
+    ld l,(hl)
+
+    ld h,high tilesLUT
+	ld a,(hl) : inc l : ld h,(hl) : ld l,a
+    ;OUT HL - pointer to tile pixels
+    ret
+
+
+; Копируем карту в базовую
+; IN HL MAP
+copyMap:
+;   DE: source address (compressed data)
+;   BC: destination address (decompressing)
+    ex hl,de : ld bc,map : jp dzx0
+
+;    ld de,map
+;3:    
+;    ld a,(hl) : cp 255 : ret z
+;    ld (de),a : inc hl : inc de
+;    jp 3b
+
+    align 256
+maps:   dw map00
+        ;   01    02    03    04    05     06   07    08    09    10
+        dw map01,map02,map03,map09,map04,map08,map05,map17,map16,map06
+        ;   11    12    13    14    15    16    17    18    19    20
+        dw map07,map20,map11,map13,map10,map15,map14,map19,map18,map12
+
+    align 256
+mapMusic:   dw music4    
+
+            dw music1,music0,music3,music2,music1
+            dw music0,music3,music2,music1,music0
+            dw music3,music2,music1,music0,music3
+            dw music4,music6,music4,music6,music4
+;            dw music4,music3,music4,music3,music4
+;            dw music1,music0,music1,music2,music1
+;            dw music0,music1,music2,music1,music0
+;            dw music1,music2,music1,music0,music1
+;            dw music4,music3,music4,music3,music4
+            
+            
+
+
+    align 256
+mapLines:
+N=0
+        dup MAP_HEIGHT
+        dw map+N*MAP_WIDTH        
+N=N+1        
+        edup
+
+map:
+    incbin "maps\map00.tmx.mapa"
+    db 255
+
+DOOR_XY = map+MAP_WIDTH*MAP_HEIGHT+13
+
+map00:
+;    incbin "maps\map01.tmx.mapa.zx0"
+    ;db 255
+map01:
+    incbin "maps\map01.tmx.mapa.zx0"
+    ;db 255
+map02:
+    incbin "maps\map02.tmx.mapa.zx0"
+    ;db 255    
+map03:
+    incbin "maps\map03.tmx.mapa.zx0"
+    ;db 255    
+map04:
+    incbin "maps\map04.tmx.mapa.zx0"
+    ;db 255  
+map05:
+    incbin "maps\map05.tmx.mapa.zx0"
+    ;db 255  
+map06:
+    incbin "maps\map06.tmx.mapa.zx0"
+    ;db 255  
+map07:
+    incbin "maps\map07.tmx.mapa.zx0"
+    ;db 255  
+map08:
+    incbin "maps\map08.tmx.mapa.zx0"
+    ;db 255  
+map09:
+    incbin "maps\map09.tmx.mapa.zx0"
+    ;db 255      
+map10:
+    incbin "maps\map10.tmx.mapa.zx0"
+    ;db 255          
+map11:
+    incbin "maps\map11.tmx.mapa.zx0"
+    ;db 255              
+map12:
+    incbin "maps\map12.tmx.mapa.zx0"
+    ;db 255              
+map13:
+    incbin "maps\map13.tmx.mapa.zx0"
+    ;db 255                  
+map14:
+    incbin "maps\map14.tmx.mapa.zx0"
+    ;db 255      
+map15:
+    incbin "maps\map15.tmx.mapa.zx0"
+    ;db 255                   
+map16:
+    incbin "maps\map16.tmx.mapa.zx0"
+    ;db 255                   
+map17:
+    incbin "maps\map17.tmx.mapa.zx0"
+    ;db 255                   
+map18:
+    incbin "maps\map18.tmx.mapa.zx0"
+    ;db 255                   
+map19:
+    incbin "maps\map19.tmx.mapa.zx0"
+    ;db 255                   
+map20:
+    incbin "maps\map20.tmx.mapa.zx0"
+    ;db 255                   

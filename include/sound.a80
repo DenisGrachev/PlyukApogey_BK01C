@@ -1,0 +1,120 @@
+
+;Простейший игратель эффектов на одном канале таймера
+;Формат - 1 500 000 гц / делитель = частота
+;Эффект делаются в shiru ayfx editor, потом экспорт в csv и конвертером уже в бинарник с преобразованием частоты АУ-ВИ53
+;Если FFFD - то ВКЛЮЧИТЬ КАНАЛ
+;Если FFFE - то ВЫКЛЮЧИТЬ КАНАЛ
+;Если FFFF - то КОНЕЦ ЭФФЕКТА
+
+
+;sfxFly:
+;    incbin "sfx\fly.csv.sfx"
+;sfxLand:
+;    incbin "sfx\land.csv.sfx"
+;sfxReflect:
+;    incbin "sfx\reflect.csv.sfx"
+;sfxWin:
+;    incbin "sfx\win.csv.sfx"
+;sfxDead:
+;    incbin "sfx\dead.csv.sfx"
+;sfxExit:
+;    incbin "sfx\exit.csv.sfx"
+;sfxCoin:
+;    incbin "sfx\coin.csv.sfx"   
+;sfxShow:
+;    incbin "sfx\show.csv.sfx" 
+;sfxGun:
+;    incbin "sfx\gun2.csv.sfx"     
+
+sfxClone:
+    incbin "sfx\sClone.csv.sfx" 
+sfxStep01:
+    incbin "sfx\sStep01a.csv.sfx" 
+sfxStep02:
+    incbin "sfx\sStep02a.csv.sfx"         
+sfxFall:
+    incbin "sfx\sFall.csv.sfx"             
+sfxKey:
+    incbin "sfx\sKey.csv.sfx"                 
+sfxDoor:
+    incbin "sfx\sDoor.csv.sfx"                     
+sfxRestart:
+    incbin "sfx\sRestart.csv.sfx"        
+sfxWin:
+    incbin "sfx\sWin.csv.sfx"                       
+sfxCrack:
+    incbin "sfx\sCrack.csv.sfx"                           
+sfxFly:
+    incbin "sfx\sFly.csv.sfx"                               
+
+playStepSound:
+    jp playStepSound01
+playStepSound01:
+    ld hl,playStepSound02 : ld (playStepSound+1),hl
+    ld hl,sfxStep01 : jp playSFX    
+playStepSound02:
+    ld hl,playStepSound01 : ld (playStepSound+1),hl
+    ld hl,sfxStep02 : jp playSFX    
+
+;номер эффект который сейчас играет
+soundToPlay: db 255
+;указатель в текущем эффекте
+soundPointer: dw sfxClone
+
+doSounds:   
+    xor a : ld (playSFX+1),a
+    ld a,(soundToPlay) : cp 255 : ret z    
+    ld hl,(soundPointer)    
+    ;check high byte, id #ff then low byte is command
+    inc hl : ld a,(hl) : dec hl
+    cp #ff : jp nz,sReadNote
+    ld a,(hl);get command byte
+;    cp #ff : ret z ;#ffff - end of fx reached
+    cp #ff : jp z,stopSFX ;#ffff - end of fx reached
+    cp #fd : jp z,sEnableTimer ;#fffd - enable chanel and play note
+    cp #fe : jp nz,sReadNote ;#fffe - disable chanel - pause
+sDisableTimer:
+    ld  A,0B6h        ;выключить 2-й канал
+ ;   OUT  (08),a       ;
+    ld (#EC03),a
+    jp sNextNote       ;перейти к следующей ноте
+sEnableTimer:        
+    ld  A,0B6h        ;включить 2-й канал
+    ld (#EC03),a
+ ;   OUT  (08),a       ;
+    ;и сразу поиграть следующую ноту
+    inc hl : inc hl
+    ld (soundPointer),hl  ; (! bugfix)
+sReadNote:
+    ld  A,(hl)         ;
+    ;OUT  (09h),a       ;
+    ld (#EC02),a
+    inc hl
+    ld A,(hl)          ;
+    ;OUT  (09h),a       ;    
+    ld (#EC02),a
+sNextNote:
+    ld hl,(soundPointer) : inc hl : inc hl : ld (soundPointer),hl
+    ret
+
+stopSFX:
+    ld (soundToPlay),a
+    ret
+
+;играть звук который тут же не может перебиться
+playSFXTOP:    
+    ld a,1 : ld (playSFX+1),a
+    ;init sound pointer
+    ld (soundPointer),hl
+    ;enable sound process
+    xor a : ld (soundToPlay),a      
+    ret
+playSFX:    
+    ld a,0 : or a : ret nz
+    ;init sound pointer
+    ld (soundPointer),hl
+    ;enable sound process
+    xor a : ld (soundToPlay),a      
+    ret
+
+    

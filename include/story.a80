@@ -1,0 +1,125 @@
+;история побега
+
+initStory:
+    ; выключаем экран
+    call disableRender     
+
+    ; рисуем терминал
+    ;DE: source address (compressed data)
+    ;BC: destination address (decompressing)
+    ld de,storyMap : ld bc,map : call dzx0
+    ld hl,map : call drawMapInternal
+
+    ld a,GS_STORY : ld (gameState),a
+
+    IFNDEF MUTE_MUSIC
+        ld hl,music4: call initMusic
+    ENDIF
+
+    ld a,32 : call delay
+
+    call resetCamera
+
+    ld hl,storyText : call initDynamicString
+
+    ret
+    
+doStory:
+
+
+wasStartKey:
+	ld a,0 : or a : jp z,1f	
+	dec a : ld (wasStartKey+1),a
+	or a : jp nz,7f
+	;ld a,GS_START_GAME : ld (gameState),a    
+	jp startGame
+
+1:	
+    call doDynamicString
+
+    call processControls
+    ld a,(keyFIRE) : or a : jp z,2f
+
+	IFNDEF MUTE_MUSIC3
+    	call stopMusic
+	ENDIF
+	ld hl,sfxClone : call playSFX	
+	ld a,64 : ld (wasStartKey+1),a
+2:   
+    ; музыка
+		IFNDEF MUTE_MUSIC
+		    call playMusic	
+		ENDIF		
+
+    ;озвучиваем терминал
+    ;если пауза не пищим
+    ld a,(dsDelay+1) : or a : jp nz,7f
+    ;если пробел или 255 то не пищим
+    ld hl,(dynamicStringPointer+1) : ld a,(hl)
+    cp 255 : jp z,7f
+    cp 32: jp z,7f
+terminalCount:
+    ld a,0 : inc a : and 1 : ld (terminalCount+1),a
+    or a : jp nz,7f
+    ld hl,sfxFall : call playSFX
+7:
+
+ ; Звуковой движок
+		call doSounds
+        
+    ; трясучка
+	ld h, high cameraLUT
+storyScroll:	
+	ld a,0 : add a,a : ld l,a	
+	ld e,(hl) : inc l : ld d,(hl) : ex de,hl
+	ld (videoADDR+1),hl	
+sinPosStory:
+	ld hl,storyLUT : ld a,(hl) : inc l : ld (sinPosStory+1),hl : ld (storyScroll+1),a
+
+    jp mainLoop
+
+storyText:       
+    db w,1*5,16," ",254,64
+    db r,1*5,16,"nhtdjuf! nhtdjuf!",254,64
+    db g,1*5,16,"                 ",254,8
+    db r,1*5,16,"j,yfhe;ty ,tuktw!",254,64
+    db g,1*5,16,"                 ",254,8
+    db g,1*5,16,"dsgjkyztncz pfghjc///",254,64+32
+    db g,1*5,16,"                     ",254,8
+    db g,1*5,16,"gjkextybt byajhvfwbb///",254,64
+    db g,1*5,16,"                       ",254,8
+
+    db m,1*5,16,"bltynbabrfnjh j,hfpwf:",254,32
+    db w,1*5,20,"1399",254,64
+
+    db y,1*5,25,"venfwbb:",254,32
+    ;db w,1*5,29,"vj;tn ct,z rkjybhjdfnm",254,64
+    db w,1*5,29,"evttn ct,z rkjybhjdfnm",254,64
+
+    db c,1*5,34,"lfnf gj,tuf:",254,32
+    db w,1*5,38,"14/07/2133",254,64
+
+    db r,1*5,43,"rkbxrf:",254,64
+    db w,1*5,47,"gk.r",254,64
+
+    db 10000010b,11*5,47,"      ",254,1
+    db 10000010b,11*5,48,"      ",254,1
+    db 10000010b,11*5,49,"      ",254,1
+    db 10000010b,11*5,50,"      ",254,1
+    ;db 10000010b,11*5,52,"      ",254,1
+    db 10000010b,11*5,47,"ghj,tk",255    
+
+    ;db w,9*5,18,"3129",255
+    
+    align 256
+storyLUT:
+	
+    dup 256/64
+	db 1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1  
+    db 1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1
+    db 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1  
+    db 1,1,1,4,1,1,1,1,1,1,1,1,1,1,1,1
+	edup	
+
+storyMap:
+    incbin "maps\story.tmx.mapa.zx0"

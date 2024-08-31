@@ -1,0 +1,77 @@
+;титры, каменты писать уже нет сил :)
+
+initCredits:
+    call waitRaster
+    ; выключаем экран
+    call disableRender     
+
+     ;отрисуем заставку
+    ;ld de,menuTileSet : call setTileSet
+    ;ld hl,creditsMap : call drawMapInternal    
+    ld de,creditsMap : ld bc,map : call dzx0
+    ld hl,map : call drawMapInternal
+
+    ld a,64 : call delay
+
+    call resetCamera
+
+	call mus_stop    
+
+	IFNDEF MUTE_MUSIC3
+    ld hl,menuMusic : call mus_init0		
+	ENDIF
+
+    ld a,GS_CREDITS : ld (gameState),a            
+
+    ld hl,creditsText : call initDynamicString
+
+    ret
+
+doCredits:
+        IFNDEF MUTE_MUSIC3
+        call mus_play
+        ENDIF       
+        call doDynamicString
+
+    jp mainLoop
+
+    ret
+
+creditsText:
+    db w,3*5,05*4-1,"                   ",254,64    
+    db w,3*5,08*4-1,"c fgjuttv ,jhjkbcm ",254,1
+    db w,3*5,09*4-1,"djn 'nb lj,hst k.lb",254,128+64        
+    db w,3*5,08*4-1,"                   ",254,1
+    db w,3*5,09*4-1,"                   ",254,1            
+    db w,3*5,08*4-1," bltz<uhfabrf<rjl  ",254,1    
+    db w,3*5,09*4-1,"   ltybc uhfxtd    ",254,128+64
+    db w,3*5,08*4-1,"                   ",254,1    
+    db w,3*5,09*4-1,"                   ",254,1
+    db w,3*5,08*4-1,"      vepsrf       ",254,1    
+    db w,3*5,09*4-1,"   jktu ybrbnby    ",254,128+64
+    db w,3*5,08*4-1,"                   ",254,1    
+    db w,3*5,09*4-1,"                   ",254,1
+    db w,3*5,08*4-1-2,"   ntcnbhjdfybt    ",254,1    
+    db w,3*5,09*4-1-2," fhntvrf dfcbkmtd  ",254,1
+    db w,3*5,10*4-1-2,"   jktu ybrbnby    ",254,1
+    db w,3*5,11*4-1-2,"   bdfy ctktpytd ",254,128+64
+    db w,3*5,08*4-1-2,"                    ",254,1    
+    db w,3*5,09*4-1-2,"                    ",254,1
+    db w,3*5,10*4-1-2,"                    ",254,1
+    db w,3*5,11*4-1-2,"                  ",254,1
+    db w,3*5,08*4-1-2," jnltkmyjt cgfcb,j  ",254,1    
+    db w,3*5,09*4-1-2,"   vb[fbk kfhby     ",254,1
+    db w,3*5,10*4-1-2,"  fktrctq vjhjpjd   ",254,128+64
+    db w,3*5,08*4-1-2,"                    ",254,1    
+    db w,3*5,09*4-1-2,"                    ",254,1
+    db w,3*5,10*4-1-2,"                    ",254,1        
+    db w,3*5,8*4+2,"cgfcb,j xnj buhfkb!",254,254
+    db w,3*5,8*4+2,"                   ",254,1
+    db w,3*5,8*4+2," lj yjds[ dcnhtx!  ",254,254
+    db w,3*5,8*4+2,"                   ",253
+
+    
+    
+
+creditsMap:
+    incbin "maps\credits.tmx.mapa.zx0"    

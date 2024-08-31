@@ -1,0 +1,6 @@
+
+;рисуем тайлик с кол-ом клонов которых осталось
+doGUI:
+    ld hl,(videoADDR+1) : ld de,9 + 8*WIDTH+15*5+1 : add hl,de
+    ld bc, numericSprite : call drawSprite1   
+    ret

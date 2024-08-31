@@ -1,0 +1,56 @@
+GS_INIT_MAP = 0
+GS_GAMEPLAY = 1
+GS_START_GAME = 2
+GS_INTRO = 3
+GS_MENU = 4
+GS_OUTRO = 5
+GS_STORY = 6
+GS_CREDITS = 7
+
+
+gameState: db GS_GAMEPLAY
+
+doInitMap:
+ 	; Включаем геймплей
+    ld a,GS_GAMEPLAY : ld (gameState),a
+    ; Инит карты
+	call initMap   
+    ; Назад в царь цикл
+    jp mainLoop
+
+doGameplay:
+        ; Обновляем ГУЙ
+		;call doGUI
+
+		; Обновляем камеру
+		call doCamera		
+		
+		;Рисуем спрайты максимально быстро сразу после прихода луча, чтобы с дабл буффером не морочится. Для одного спрайта должно быть норм
+		call flushSprites
+		
+		; Читаем кнопки в буффер
+		call processControls
+
+		; Тикаем счетчики анимации
+		call doAnimationTicks
+
+		; Обновляем героя
+		call doHero
+
+		;Обновляем клонов
+		call doClones
+
+		;Обновляем ключи
+		call doKeys				
+
+		; Звуковой движок
+		call doSounds
+
+
+
+		IFNDEF MUTE_MUSIC
+		call playMusic	
+		ENDIF		
+
+        ; Назад в царь цикл	
+        jp mainLoop

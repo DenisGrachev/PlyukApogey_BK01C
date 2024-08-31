@@ -1,0 +1,461 @@
+
+HERO_IDLE = 0
+HERO_MOVE_RIGHT = 1
+HERO_MOVE_LEFT = 2
+HERO_MOVE_DOWN = 3
+HERO_MOVE_UP = 4
+HERO_OPEN_DOOR = 5
+
+HERO_FLY_LEFT = 6
+HERO_FLY_RIGHT = 7
+
+HERO_RESPAWN = 16
+HERO_WIN_LEVEL = 32
+HERO_RESTART_LEVEL = 64
+HERO_WAIT_STATE = 255
+
+MAX_CLONES = 12
+
+
+resetHero:
+    xor a : ld (heroStateCount),a
+    ld a,MAX_CLONES : ld (heroClones),a
+    ld a,HERO_IDLE : ld (heroState+1),a : ld (heroNextState),a
+    ld hl,heroIdleSprite : ld (heroSpriteData+1),hl
+    ld a,#c9 : ld (checkDoor),a ; put ret to door check
+    ret
+
+;счётчик для каждого стейта
+heroStateCount:     db 0
+heroClones: db MAX_CLONES
+
+heroNextState: db HERO_IDLE
+
+checkDoor:
+    ret
+    ld hl,(DOOR_XY)
+    ld a,(heroCellXY+1) : cp l : ret nz
+    ld a,(heroCellXY+2) : cp h : ret nz
+
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,64+32 : ld (heroStateCount),a
+    ld a,HERO_RESTART_LEVEL : ld (heroNextState),a
+    ld hl,heroWinSprite : ld (heroSpriteData+1),hl
+    ld hl,sfxWin : call playSFX    
+    call stopMusic
+    ld a,#c9 : ld (checkDoor),a ; put ret to door check
+    ld a,(currentLevel+1) : inc a : ld (currentLevel+1),a
+    ret
+
+openDoor:    
+    ld a,HERO_OPEN_DOOR : ld (heroNextState),a    
+    xor a : ld (checkDoor),a    
+    ret
+
+checkKeys:
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+04)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f
+    ;collect key
+    ld hl,VIDEOMEM_TMP_BUFFER : ld (keysTable+0*3+1),hl
+    xor a : ld (map+MAP_WIDTH*MAP_HEIGHT+04),a
+    ld hl,sfxKey : call playSFX    
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,12 : ld (heroStateCount),a
+    ld a,HERO_IDLE : ld (heroNextState),a
+    ld a,(totalKeys) : dec a : ld (totalKeys),a     
+    jp z,openDoor  
+1:
+
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+06)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f
+    ;collect key
+    ld hl,VIDEOMEM_TMP_BUFFER : ld (keysTable+1*3+1),hl
+    xor a : ld (map+MAP_WIDTH*MAP_HEIGHT+06),a
+    ld hl,sfxKey : call playSFX
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,12 : ld (heroStateCount),a
+    ld a,HERO_IDLE : ld (heroNextState),a
+    ld a,(totalKeys) : dec a : ld (totalKeys),a    
+    jp z,openDoor      
+1:
+
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+08)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f
+    ;collect key
+    ld hl,VIDEOMEM_TMP_BUFFER : ld (keysTable+2*3+1),hl
+    xor a : ld (map+MAP_WIDTH*MAP_HEIGHT+08),a
+    ld hl,sfxKey : call playSFX
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,12 : ld (heroStateCount),a
+    ld a,HERO_IDLE : ld (heroNextState),a
+    ld a,(totalKeys) : dec a : ld (totalKeys),a    
+    jp z,openDoor    
+1:
+
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+10)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f
+    ;collect key
+    ld hl,VIDEOMEM_TMP_BUFFER : ld (keysTable+3*3+1),hl
+    xor a : ld (map+MAP_WIDTH*MAP_HEIGHT+10),a
+    ld hl,sfxKey : call playSFX
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,12 : ld (heroStateCount),a
+    ld a,HERO_IDLE : ld (heroNextState),a
+    ld a,(totalKeys) : dec a : ld (totalKeys),a   
+    jp z,openDoor        
+1:
+    ret
+
+killHero:
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,64 : ld (heroStateCount),a
+    ld a,HERO_RESTART_LEVEL : ld (heroNextState),a
+    ld hl,heroDeadSprite : ld (heroSpriteData+1),hl
+    ld hl,sfxRestart : call playSFX
+    ;TMP CHEAT
+    ld a,(keyUP) : or a : jp z,noCheat
+    ld a,(currentLevel+1) : inc a : ld (currentLevel+1),a
+noCheat:
+    call killPluk
+    jp stopMusic
+    ;ret
+
+respawnHero:
+    ld a,HERO_WAIT_STATE : ld (heroState+1),a : ld a,64 : ld (heroStateCount),a
+    ld a,HERO_RESPAWN : ld (heroNextState),a
+    ld hl,heroDeadSprite : ld (heroSpriteData+1),hl
+    ld hl,sfxRestart : call playSFX
+    call killPluk    
+    ret
+doHero:    
+    ;Аттачим тайл востановления фона под героем
+    ;Берём из карты тайлик под героем
+heroCellXY:     
+    ld de,6+8*256
+    call getTilePixelsXY
+    ld (tile0pixels+1),hl
+    call calcTileXY
+    ld (tile0videoADDR+1),hl
+
+
+    call checkKeys
+    
+    ld a,(heroState+1) : cp HERO_WAIT_STATE : jp z,doActionStates
+    cp HERO_OPEN_DOOR : jp z,doActionStates
+
+    ;двигаем героя
+    ;Проверяем надо ли падать?
+    ld a,(heroStateCount)
+    or a : jp nz,noChecks 
+;==ПРОВЕРКИ КОГДА STATE COUNT НОЛЬ ==
+    ld a,(heroState+1) : cp HERO_RESPAWN : jp z,noRestart
+    ; Смотрим вдруг нажата кнопка рестарта
+    ld a,(keyRESTART) : or a : jp z,noRestart
+    call killHero    
+noRestart:
+
+    ;Скрытый блок
+    ld hl,(heroCellXY+1) : call getTileXY
+    cp TILE_HIDDEN_BLOCK : jp nz,noHiddenBlock
+    ld hl,sfxClone : call playSFXTOP
+    ld hl,(heroCellXY+1) : ld a,TILE_BLOCK : call putTileXY : jp endSuperSpecialTiles
+    ;блоки движения антигравы
+noHiddenBlock:
+    cp TILE_LEFT : jp nz,noLeft
+    ; можем ли идти ? проверка коллизий
+    ld hl,(heroCellXY+1) : dec l : call getTileTypeXY    
+    CP COL_NULL : jp nz,endSuperSpecialTiles
+;flyLeft:    
+    ld a,6 : ld (heroStateCount),a    
+    ld hl,heroWalkSprite : ld (heroSpriteData+1),hl
+    ;call playStepSound
+    ld a,HERO_FLY_LEFT : ld (heroState+1),a    
+    ld hl,sfxFly : call playSFX
+    jp noChecks
+noLeft:
+    cp TILE_RIGHT : jp nz,endSuperSpecialTiles
+    ; можем ли идти ? проверка коллизий
+    ld hl,(heroCellXY+1) : inc l : call getTileTypeXY    
+    CP COL_NULL : jp nz,endSuperSpecialTiles
+;flyLeft:    
+    ld a,6 : ld (heroStateCount),a    
+    ld hl,heroWalkSprite : ld (heroSpriteData+1),hl
+    ;call playStepSound
+    ld a,HERO_FLY_RIGHT : ld (heroState+1),a    
+    ld hl,sfxFly : call playSFX
+    jp noChecks
+endSuperSpecialTiles:
+
+
+; ============= Проверяем двери и ключи ========================================
+    call checkDoor
+;    call checkKeys
+; ============== СМЕРТУШКА ======================
+    ld a,(heroState+1) : cp HERO_RESPAWN : jp z,notDead
+    ld hl,(heroCellXY+1) : call getTileTypeXY
+    CP COL_DEAD : jp nz,notDead
+    ;call killHero
+    call respawnHero
+notDead:    
+; ============== ГРАВИТАЦИЯ ====================================================
+    ;ок на границе тайла
+    ld hl,(heroCellXY+1) : inc h: call getTileTypeXY
+    ;ЕСЛИ ШИПЫ ТО ПАДАЕМ ВСЁ РАВНО
+    CP COL_DEAD : jp z,startFall
+    ;ЕСЛИ НЕ ПУСТОТА ТО ВСТАЁМ
+    CP COL_NULL : jp nz,1f
+startFall:    
+    ld hl,sfxFall : call playSFX   
+    ld a,4 : ld (heroStateCount),a    
+    ld hl,heroUpSprite : ld (heroSpriteData+1),hl
+    ld a,HERO_MOVE_DOWN : ld (heroState+1),a   
+1:
+noChecks:
+
+    
+
+; =========== СПЕЦ ТАЙЛ-ОБЬЕКТЫ ===================================================
+    ld hl,(heroCellXY+1) : inc h: call getTileXY
+    or a : jp z,noSpecialTile    
+    cp TILE_BROKEN_BLOCK_01    
+    jp c,noSpecialTile
+    inc a : inc a 
+    ld (hl),a    
+    cp TILE_BROKEN_BLOCK_01+12
+    jp nz,noCrackSound
+    ld c,a 
+    ld hl,sfxCrack : call playSFX
+    ld a,c
+noCrackSound:
+    ld hl,(heroCellXY+1) : inc h : ex de,hl : call drawTileXY    
+;  
+;;======================================================================
+noSpecialTile:
+
+    ;управление героем    
+heroState:    
+    ld a,HERO_IDLE
+
+    cp HERO_IDLE
+    jp nz,doActionStates
+    ;IDLE STATE
+    ld hl,heroIdleSprite : ld (heroSpriteData+1),hl
+    ;смотрим нажания
+    ld a,(keyRIGHT) : or a : jp z,2f
+    ;===================================
+    ; можем ли идти ? проверка коллизий
+    ld hl,(heroCellXY+1) : inc l : call getTileTypeXY
+    CP COL_PLATFORM : jp z,moveRight
+    CP COL_NULL : jp nz,endStates
+    ;===================================    
+moveRight:    
+    ld a,12 : ld (heroStateCount),a    
+    ld hl,heroWalkSprite : ld (heroSpriteData+1),hl
+    call playStepSound
+    ld a,HERO_MOVE_RIGHT : ld (heroState+1),a    
+    jp doActionStates ; и сразу стейты обрабатываем
+2:
+    ld a,(keyLEFT) : or a : jp z,2f
+     ;===================================
+    ; можем ли идти ? проверка коллизий
+    ld hl,(heroCellXY+1) : dec l : call getTileTypeXY
+    CP COL_PLATFORM : jp z,moveLeft
+    CP COL_NULL : jp nz,endStates
+    ;===================================
+moveLeft:    
+    ld a,12 : ld (heroStateCount),a
+    ld hl,heroWalkSprite : ld (heroSpriteData+1),hl
+    call playStepSound
+    ld a,HERO_MOVE_LEFT : ld (heroState+1),a    
+    jp doActionStates ; и сразу стейты обрабатываем
+2:
+    ld a,(keyFIRE) : or a : jp z,2f
+    ;Смотрим было ли поднятие клавиши
+    ld a,(wasFireUp) : or a : jp z,2f
+    xor a : ld (wasFireUp),a
+     ;===================================
+     ; проверка может дверь телепорт под нами
+    ld hl,(heroCellXY+1) : call getTileXY
+    cp TILE_START : jp z,2f    ; нельзя ставить клона на входную дверь
+    cp TILE_TELEPORT_DOOR : jp nz,4f        
+    call doTeleportDoors
+    jp 2f
+4:
+     ; можем ли идти ? проверка коллизий сверху
+    ld hl,(heroCellXY+1) : dec h : call getTileTypeXY
+    CP COL_PLATFORM : jp z,7f
+    CP COL_DEAD : jp z,7f
+    CP COL_NULL : jp nz,endStates
+7:    
+
+    ;Уменьшаем кол-во клонов
+    ld a,(heroClones) : or a : jp z,endStates
+    dec a : ld (heroClones),a
+    ;Под героем делаем клона, нарисуется сам в рамках восстановления фона
+    ld hl,(heroCellXY+1) : ld a,TILE_CLONE : call putTileXY
+    ;SPAWN КЛОНА
+    ld hl,(heroCellXY+1) : call addCloneXY
+    call bornPluk
+    ld hl,sfxClone : call playSFX
+    
+    ;===================================
+    ld a,4 : ld (heroStateCount),a
+    ld hl,heroUpSprite : ld (heroSpriteData+1),hl
+    ld a,HERO_MOVE_UP : ld (heroState+1),a    
+    jp doActionStates ; и сразу стейты обрабатываем
+2:
+
+    ld a,(keyDOWN) : or a : jp z,2f
+    ;===================================
+     ; можем ли идти ? проверка коллизий? тут спрыг с платформы
+    ld hl,(heroCellXY+1) : inc h : call getTileTypeXY
+    CP COL_PLATFORM : jp nz,endStates
+    ld hl,sfxClone : call playSFX
+    ;===================================
+    ld a,4 : ld (heroStateCount),a
+    ld hl,heroWalkSprite : ld (heroSpriteData+1),hl
+    ld a,HERO_MOVE_DOWN : ld (heroState+1),a        
+    jp doActionStates ; и сразу стейты обрабатываем
+2:
+    jp endStates
+    
+
+doActionStates:    
+
+   ; ld a,(heroState+1) : ld (preHeroState+1),a
+
+    cp HERO_MOVE_RIGHT
+    jp nz,1f
+    ;MOVE RIGHT STATE
+    ld a,(heroPixelCoords+1) : inc a : ld (heroPixelCoords+1),a    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ld a,(heroCellXY+1) : inc a : ld (heroCellXY+1),a
+    ld a,HERO_IDLE : ld (heroState+1),a 
+    jp endStates
+1:    
+
+    cp HERO_FLY_RIGHT
+    jp nz,1f
+    ;FLY LEFT STATE
+    ld a,(heroPixelCoords+1) : inc a : inc a : ld (heroPixelCoords+1),a    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ld a,(heroCellXY+1) : inc a :  ld (heroCellXY+1),a
+    ld a,HERO_IDLE : ld (heroState+1),a 
+    jp endStates
+1:
+
+    cp HERO_MOVE_LEFT
+    jp nz,1f
+    ;MOVE LEFT STATE
+    ld a,(heroPixelCoords+1) : dec a : ld (heroPixelCoords+1),a    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ld a,(heroCellXY+1) : dec a : ld (heroCellXY+1),a
+    ld a,HERO_IDLE : ld (heroState+1),a 
+    jp endStates
+1:    
+
+    cp HERO_FLY_LEFT
+    jp nz,1f
+    ;FLY LEFT STATE
+    ld a,(heroPixelCoords+1) : dec a : dec a : ld (heroPixelCoords+1),a    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ld a,(heroCellXY+1) : dec a :  ld (heroCellXY+1),a
+    ld a,HERO_IDLE : ld (heroState+1),a 
+    jp endStates
+1:
+
+ cp HERO_MOVE_UP
+    jp nz,1f
+    ;MOVE UP STATE
+    ld a,(heroPixelCoords+2) : dec a : dec a : ld (heroPixelCoords+2),a    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ld a,(heroCellXY+2) : dec a : ld (heroCellXY+2),a
+    ld a,HERO_IDLE : ld (heroState+1),a 
+    jp endStates
+1:    
+ cp HERO_MOVE_DOWN
+    jp nz,1f
+    ;MOVE DOWN STATE
+    ld a,(heroPixelCoords+2) : inc a : inc a : ld (heroPixelCoords+2),a    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ld a,(heroCellXY+2) : inc a : ld (heroCellXY+2),a
+    ld a,HERO_IDLE : ld (heroState+1),a   
+    jp endStates
+1:  
+
+    cp HERO_WAIT_STATE
+    jp nz,1f
+    ;WAIT STATE
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a
+    or a : jp nz,endStates
+    ; После стейта ожидания включаем следующий
+    ld a,(heroNextState) : ld (heroState+1),a 
+    jp endStates
+1:  
+
+    cp HERO_OPEN_DOOR
+    jp nz,1f    
+    ;OPEN DOOR STATE
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a                
+    cp 254-12 : jp nz,4f
+    ld hl,sfxDoor : call playSFX
+    ;=====================================    
+    ;UpdateDoorTile
+    ld hl,(DOOR_XY) : ex hl,de : xor a : call drawTileXY    
+    ;=====================================
+    jp endStates
+4:
+    cp 256-24 : jp nz,endStates  
+    ld a,HERO_IDLE : ld (heroState+1),a     
+    xor a : ld (heroStateCount),a
+    jp endStates
+1:  
+
+    cp HERO_RESTART_LEVEL
+    jp nz,1f
+    ;RESTART STATE
+    ld a,GS_INIT_MAP : ld (gameState),a
+    jp endStates
+1:  
+
+    cp HERO_RESPAWN
+    jp nz,1f
+    ;RESPAWN
+    ld hl,(heroCellXY+1) : ld a,TILE_DEAD : call putTileXY    
+    ld a,(heroStateCount) : dec a : ld (heroStateCount),a                
+    cp 254-16 : jp nz,4f
+    ;ld a,GS_INIT_MAP : ld (gameState),a    
+    ; Стартовые координаты героя в конце карты
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT) : ld (heroCellXY+1),hl
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+2) : ld (heroPixelCoords+1),hl
+    ld a,HERO_IDLE : ld (heroState+1),a
+    xor a : ld (heroStateCount),a
+    ld hl,sfxDoor : call playSFX
+4:    
+    jp endStates
+1:  
+
+endStates:
+
+    ;ld a,(heroPixelCoords+1) : inc a : ld (heroPixelCoords+1),a
+	;x
+	;ld a,(heroPixelCoords+1) : inc a : ld (heroPixelCoords+1),a
+;1:
+;    ld a,(keyLEFT) : or a : jp z,1f
+	;x
+	;ld a,(heroPixelCoords+1) : dec a : ld (heroPixelCoords+1),a
+;1:
+
+    ;Аттачим к спрайту
+heroPixelCoords:        
+    ld de, 6*12+8*8*256; Координаты пиксельные        
+heroSpriteData:
+    ld bc,heroIdleSprite   
+    ld hl,(globalTick) : add hl,bc : ld c,l : ld b,h
+    call attachSprite0
+
+    ret

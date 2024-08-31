@@ -1,0 +1,56 @@
+
+resetKeys:
+    ld hl,keysTable+1 : ld (keysPointer),hl
+    xor a : ld (totalKeys),a
+    ld hl,doKeys0 : ld (doKeys+1),hl    
+    ld hl,VIDEOMEM_TMP_BUFFER : ld (keysTable+1+0*3),hl : ld (keysTable+1+1*3),hl : ld (keysTable+1+2*3),hl : ld (keysTable+1+3*3),hl
+    ret
+
+keysPointer: dw keysTable+1
+keysTable:   
+    db 0 : dw VIDEOMEM_TMP_BUFFER;VIDEOMEM_ADDR + 1 + 9 + 64*WIDTH+2*5
+    db 64 : dw VIDEOMEM_TMP_BUFFER;VIDEOMEM_ADDR + 1 + 9 + 64*WIDTH+3*5
+    db 128 : dw VIDEOMEM_TMP_BUFFER;VIDEOMEM_ADDR + 1 + 9 + 64*WIDTH+4*5
+    db 192 : dw VIDEOMEM_TMP_BUFFER;VIDEOMEM_ADDR + 1 + 9 + 64*WIDTH+5*5
+
+totalKeys:  db 0
+
+addKeyXY:      
+      push hl
+      ex de,hl       
+      call calcTileXY : inc hl : ex de,hl     
+      ld hl,(keysPointer) : ld (hl),e : inc hl : ld (hl),d : inc hl : inc hl : ld (keysPointer),hl
+      pop hl
+      ;убираем в карте уровня, будем проверять по табличке тут
+      ld a,h : cp 127 : ret z ;фейк ключ
+      xor a : call putTileXY
+
+    ret
+
+doKeys:
+    jp doKeys0
+
+doKeys0:
+     ld b, high keySprite
+     ld a,(keysTable+0*3+0) : add 64 : ld (keysTable+0*3+0),a : ld c,a          
+     ld hl,(keysTable+0*3+1) : call drawSprite1     
+     ld hl,doKeys1 : ld (doKeys+1),hl
+    ret    
+doKeys1:
+     ld b, high keySprite
+     ld a,(keysTable+1*3+0) : add 64 : ld (keysTable+1*3+0),a : ld c,a          
+     ld hl,(keysTable+1*3+1) : call drawSprite1     
+     ld hl,doKeys2 : ld (doKeys+1),hl
+    ret 
+doKeys2:
+     ld b, high keySprite
+     ld a,(keysTable+2*3+0) : add 64 : ld (keysTable+2*3+0),a : ld c,a          
+     ld hl,(keysTable+2*3+1) : call drawSprite1     
+     ld hl,doKeys3 : ld (doKeys+1),hl
+    ret 
+doKeys3:
+     ld b, high keySprite
+     ld a,(keysTable+3*3+0) : add 64 : ld (keysTable+3*3+0),a : ld c,a          
+     ld hl,(keysTable+3*3+1) : call drawSprite1     
+     ld hl,doKeys0 : ld (doKeys+1),hl
+    ret 

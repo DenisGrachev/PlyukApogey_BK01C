@@ -1,0 +1,393 @@
+
+
+resetSpriteSystem:
+    ld hl,VIDEOMEM_TMP_BUFFER : ld (tile0videoADDR+1),hl : ld (sprite0videoADDR+1),hl
+    ld hl,drawSprite1 : ld (sprite0DrawProcedure+1),hl
+    ret
+
+flushSprites:
+;восстанавливаем тайл под спрайтом
+tile0videoADDR:
+		ld hl,VIDEOMEM_TMP_BUFFER	;VIDEOMEM_ADDR + 1 + 9 + 8*WIDTH+4*5
+        ;ld hl,VIDEOMEM_ADDR + 9 + 0*1*WIDTH+0*2
+tile0pixels:
+        ld bc,tileSet;+30*2
+        call drawTileInternal
+;рисуем спрайт
+sprite0videoADDR:		
+		ld hl,VIDEOMEM_TMP_BUFFER	;VIDEOMEM_ADDR + 1 + 9 + 8*WIDTH+4*5
+sprite0pixels:		
+		ld bc,heroIdleSprite
+sprite0DrawProcedure: call drawSprite1
+        ret
+
+;savedStack:
+;    ld sp,00000
+;    ret
+
+;HL - координаты в экране
+;BC - указатель на графику
+drawSprite1:   
+
+/*
+    ld de,WIDTH-3
+    pop bc  : ld (hl),c : inc hl : ld (hl),b : inc hl
+    pop bc  : ld (hl),c : inc hl : ld (hl),b
+    add hl,de
+    pop bc  : ld (hl),c : inc hl : ld (hl),b : inc hl
+    pop bc  : ld (hl),c : inc hl : ld (hl),b
+    add hl,de
+    pop bc  : ld (hl),c : inc hl : ld (hl),b : inc hl
+    pop bc  : ld (hl),c : inc hl : ld (hl),b
+    add hl,de
+    pop bc  : ld (hl),c : inc hl : ld (hl),b : inc hl
+    pop bc  : ld (hl),c ;: inc hl : ld (hl),b        
+    jp savedStack
+*/
+    ld de,WIDTH-3
+
+	dup 3
+
+	;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+	;edup	    
+
+    ld a,(bc) : ld (hl),a
+    inc bc     
+	add hl,de
+	edup
+    
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+	;edup	    
+
+    ld a,(bc) : ld (hl),a
+    
+
+    ret
+
+drawSprite2:
+  ;  jp savedStack
+    ld de,WIDTH-4
+
+	dup 3
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ;edup
+
+    inc hl;пропускаем аттрибут
+
+    ld a,(bc) : ld (hl),a
+    inc bc     
+	add hl,de
+	edup
+    
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+	;edup	   
+
+    inc hl;пропускаем аттрибут 
+
+    ld a,(bc) : ld (hl),a
+
+    ret
+
+drawSprite3:
+  ; jp savedStack
+    ld de,WIDTH-4
+
+	dup 3
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    inc hl;пропускаем аттрибут
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ;edup
+
+    
+
+    ld a,(bc) : ld (hl),a
+    inc bc     
+	add hl,de
+	edup
+    
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    inc hl;пропускаем аттрибут 
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+	;edup	   
+
+    
+
+    ld a,(bc) : ld (hl),a
+
+    ret
+
+drawSprite4:
+   ;jp savedStack
+    ld de,WIDTH-4
+
+	dup 3
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    inc hl;пропускаем аттрибут
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl    
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+    ;edup
+
+    
+
+    ld a,(bc) : ld (hl),a
+    inc bc     
+	add hl,de
+	edup
+    
+
+    ;dup 3
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+    inc hl;пропускаем аттрибут 
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl    
+
+    ld a,(bc) : ld (hl),a
+    inc bc 
+    inc hl
+
+	;edup	   
+
+    ld a,(bc) : ld (hl),a
+
+    ret
+
+;Привязать к 0 спрайту
+;de - координаты пиксельные
+;bc - указатель на графику
+attachSprite0:
+    ;0.1.2 дельта внутри знакоместа/символа
+    ld h,high spriteHLUT:  ld l,e : ld l,(hl) : ld h,0 : add hl,bc 
+    ld (sprite0pixels+1),hl
+
+     ; Адрес линии
+    ld h, high videoVLUT : ld l,d
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a   
+
+    ;in HL add of line start
+    push hl
+
+    ;x уже не поместиться в маленькую табличку, поэтому через hl
+    ld h,0 : ld l,e : ld de,videoHLUT : add hl,hl : add hl,hl : add hl,de ;4 байта в луте
+    
+    ;читаем параметры
+    ld e,(hl) :  ld d,0 ;символ/знакоместо    
+    inc hl : ld a,(hl) : inc hl : ld h,(hl) : ld l,a : ld (sprite0DrawProcedure+1),hl
+    
+    pop hl
+    add hl,de; добавляем знакоместо
+
+    ld (sprite0videoADDR+1),hl
+
+    ret
+
+;IN : e =x Pixel AND d=yPixel x 2
+;     bc - SpriteData
+;y с точностью до двух пикселей, иначе 6 копий каждого спрайта надо, для этой игры пойдёт и так
+;x уже с тчностью до 1-го
+/*
+drawSpriteXY:    
+
+    ;0.1.2 дельта внутри знакоместа/символа
+    ld h,high spriteHLUT:  ld l,e : ld l,(hl) : ld h,0 : add hl,bc 
+    
+    ;push hl : pop bc
+    ld c,l : ld b,h
+    ;ld (spriteData+1),hl
+     
+
+    ; Адрес линии
+    ld h, high videoVLUT : ld l,d
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a   
+
+
+    ;in HL add of line start
+    push hl
+
+    ;x уже не поместиться в маленькую табличку, поэтому через hl
+    ld h,0 : ld l,e : ld de,videoHLUT : add hl,hl : add hl,hl : add hl,de ;4 байта в луте
+    
+    ;читаем параметры
+    ld e,(hl) :  ld d,0 ;символ/знакоместо    
+    inc hl : ld a,(hl) : inc hl : ld h,(hl) : ld l,a : ld (spriteDrawProc+1),hl
+
+    ;inc hl : ld a,(hl) ;смещение спрайта 0.1.2
+    ;-!!!!!!!!!!!НАДО К BC ДОБАВИТЬ
+
+    ; сохраняем стэк
+ ;   ld hl,2 : add hl,sp : ld (savedStack+1),hl
+
+    pop hl ; stack -2 поэтому выше -2
+    add hl,de; добавляем знакоместо
+
+;spriteData:
+ ;   ld sp,00000    
+
+spriteDrawProc: jp drawSprite1
+    
+    ;ret
+*/
+
+; Табличка для каждой горизонтальной координаты, какой процой рисовать
+; 0-191
+
+; номер символа, процедурка отрисовки
+videoHLUT:
+
+N=0
+    dup 16
+    db N+1 : dw drawSprite1 : db 0
+    db N+1 : dw drawSprite1 : db 0
+    db N+1 : dw drawSprite1 : db 0
+
+    db N+2 : dw drawSprite2 : db 0
+    db N+2 : dw drawSprite2 : db 0
+    db N+2 : dw drawSprite2 : db 0
+
+    db N+3 : dw drawSprite3 : db 0
+    db N+3 : dw drawSprite3 : db 0
+    db N+3 : dw drawSprite3 : db 0
+
+    db N+4 : dw drawSprite4 : db 0
+    db N+4 : dw drawSprite4 : db 0
+    db N+4 : dw drawSprite4 : db 0
+        
+N=N+5    
+    edup
+
+    align 256
+videoVLUT:
+N=0
+    dup 128;128 линии по вертикали
+    dw VIDEOMEM_ADDR + LEFT_CHARS + N*WIDTH
+N=N+1    
+    edup     
+
+;0,1,2
+;смещение внутри знакоместа
+    align 256
+spriteHLUT:
+    dup 64
+        db 64*0,64*1,64*2
+    edup
+
+
+
+;    align 256
+;videoHLUT:
+;N=1
+;    dup 16
+;    db N,N,N,N,N+1,N+1,N+1,N+1,N+1,N+2,N+2,N+2,N+2,N+3,N+3,N+3,N+3
+;N=N+5
+;    edup
+
+    ;db 1,1,1,2,2,2,3,3,3,4,4,4
+    ;db 6,6,6,7,7,7,8,8,8,9,9,9
+
+
+heroIdleSprite:
+    incbin "gfx\heroIdleSprite.png.spr"
+heroWalkSprite:
+    incbin "gfx\heroWalkSprite.png.spr"    
+heroUpSprite:
+    incbin "gfx\heroUpSprite.png.spr"       
+heroDeadSprite:
+    incbin "gfx\heroDeadSprite.png.spr"       
+heroWinSprite:
+    incbin "gfx\heroWinSprite.png.spr"           
+
+    align 256 
+heroCloneSprite:    
+    incbin "gfx\heroCloneSprite.png.spr"        
+
+    align 256 
+keySprite:    
+    incbin "gfx\keySprite.png.spr"        
+
+    align 256 
+numericSprite:    
+    incbin "gfx\numeric.png.spr"            

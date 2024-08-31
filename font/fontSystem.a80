@@ -1,0 +1,137 @@
+
+restartDynamicString:
+    ld hl,00000    
+;hl - string
+initDynamicString:    
+    ld (restartDynamicString+1),hl
+initDynamicString0:        
+ ;атрибут
+    ld a,(hl) : inc hl : ld (dynAttr+1),a
+    ;координаты
+    ld e,(hl) : inc hl : ld a,(hl) : inc hl
+    
+    ld (dynamicStringPointer+1),hl
+    ld h,high videoVLUT : add a,a : ld l,a : ld a,(hl) : inc l : ld h,(hl) : ld l,a
+    ld d,0 : add hl,de;add x premultiplied by 5
+
+    ld (dynamicStringADDR+1),hl
+
+    xor a : ld (dsDelay+1),a 
+
+    ret
+;Рисуем букву из строки
+doDynamicString:
+
+dynamicStringPointer: ld hl,testString
+
+dsDelay:
+    ld a,0 : or a : jp z,1f
+    dec a : ld (dsDelay+1),a : ret nz
+    inc hl : jp initDynamicString0   
+1:    
+  
+    ld a,(hl) : cp 255 : ret z
+    ; повторить сначала
+    cp 253 : jp z,restartDynamicString
+    ;задержка перед след. строкой
+    cp 254 : jp nz,1f
+    inc hl : ld a,(hl);читаем задержку
+    ld (dynamicStringPointer+1),hl
+    ld (dsDelay+1),a : ret
+1:
+    inc hl : ld (dynamicStringPointer+1),hl : dec hl
+    ex de,hl
+dynamicStringADDR:  
+    ld hl,VIDEOMEM_TMP_BUFFER
+    ;ld hl,VIDEOMEM_ADDR + LEFT_CHARS+WIDTH*16 + 2*5;VIDEOMEM_TMP_BUFFER	
+ ;сквозь аттрибуты
+    ld a,(hl) : and 10000000b : or a : jp z,1f    
+dynAttr:        
+    ld a,y
+    ld (hl),a
+    inc hl    
+1:      
+    push hl
+    ld a,(de)
+    call drawLetter
+    pop hl
+    inc hl
+    inc hl
+    ld (dynamicStringADDR+1),hl
+    ret
+    
+
+;hl - string
+drawString:
+    ;атрибут
+    ld a,(hl) : inc hl : ld (stringAttr+1),a
+    ;координаты
+    ld e,(hl) : inc hl : ld a,(hl) : inc hl
+    push hl
+    ld h,high videoVLUT : add a,a : ld l,a : ld a,(hl) : inc l : ld h,(hl) : ld l,a
+    ld d,0 : add hl,de;add x premultiplied by 5
+    ;inc hl;пропускаем аттрибут
+    ex de,hl
+    pop hl
+    
+reLetter:
+    ld a,(hl) : cp 255 : ret z
+
+;==========================
+    ;сквозь аттрибуты
+    ld a,(de) : and 10000000b : or a : jp z,1f    
+stringAttr:        
+    ld a,0
+    ld (de),a
+    inc de    
+1:  
+    ;==========================      
+    ld a,(hl)
+    push hl
+    push de
+    ex de,hl
+    call drawLetter
+    pop de
+    inc de    
+    inc de    
+    pop hl
+    inc hl
+    jp reLetter
+
+    ret
+    
+    ;Координаты Х и У
+testString: 
+    dw VIDEOMEM_ADDR + LEFT_CHARS+WIDTH*16 + 2*5+1
+    db m,2*5,52,"ghdtn vbh!",255
+
+;IN a - leter, HL-ADDR TO DRAW LETTER
+drawLetter:    
+    or a : ret z    
+    push hl 
+    sub 32
+    ld l,a : ld h,0 : add hl,hl : add hl,hl : add hl,hl  : ld de,font : add hl,de : ex de,hl
+    pop hl
+   
+    ld bc,WIDTH-2    
+    
+
+    dup 3
+    ld a,(de) : ld (hl),a
+    inc de : inc hl
+    ld a,(de) : ld (hl),a
+    inc de : inc hl
+    add hl,bc
+    edup
+    ld a,(de) : ld (hl),a
+    inc de : inc hl
+    ld a,(de) : ld (hl),a
+    ret
+
+attrOnly:
+    ret    
+
+font:
+    ;incbin "font\fontOneLine.png.spr"
+    ;incbin "font\fontQWERTY.png.spr"
+    incbin "font\fontQWERTYsmall.png.spr"

@@ -1,0 +1,20 @@
+
+globalTick: dw 16*0
+
+resetAnimationSystem:
+
+	xor a : ld (globalTick),a : ld (animTick+1),a : ld (globalFrame+1),a
+
+	ret
+
+doAnimationTicks:
+
+animTick: ld a,0 : inc a : and 3 : ld (animTick+1),a
+        	or a : jp nz,1f
+globalFrame: ld a,0 : inc a : and 3 : ld (globalFrame+1),a		  
+			 add a,a : add a,a : add a,a : add a,a : ld (globalTick),a
+
+;globalTick: ld a,0 : add 16 : and 64 : ld (globalTick+1),a
+
+1:
+    ret

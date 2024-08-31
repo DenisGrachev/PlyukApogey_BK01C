@@ -1,0 +1,62 @@
+
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15) : call addTeleportDoor
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+17) : call addTeleportDoor
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+19) : call addTeleportDoor
+    ;ld hl,(map+MAP_WIDTH*MAP_HEIGHT+21) : call addTeleportDoor
+
+; межэтажные телепорты двери
+doTeleportDoors:    
+    ld hl,sfxDoor : call playSFX
+
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f
+    ; телепортируемся во вторую дверь
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+1*4 + 0) : ld (heroCellXY+1),hl    
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+1*4 + 2) : ld (heroPixelCoords+1),hl    
+    ret
+1:
+
+
+
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+1*4)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f    
+    ; телепортируемся во третью дверь, если она есть
+    ld a,(map+MAP_WIDTH*MAP_HEIGHT+15+2*4 + 0) : or a : jp z,7f
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+2*4 + 0) : ld (heroCellXY+1),hl    
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+2*4 + 2) : ld (heroPixelCoords+1),hl    
+    ret
+    ;нет третей, значит в первую
+7:    
+    ; телепортируемся во первую дверь
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4 + 0) : ld (heroCellXY+1),hl    
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4 + 2) : ld (heroPixelCoords+1),hl    
+    ret
+
+
+
+
+1:
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+2*4)
+    ld a,(heroCellXY+1) : cp l : jp nz,1f
+    ld a,(heroCellXY+2) : cp h : jp nz,1f
+    ; телепортируемся во четвертую дверь, если она есть
+    ld a,(map+MAP_WIDTH*MAP_HEIGHT+15+3*4 + 0) : or a : jp z,7f
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+3*4 + 0) : ld (heroCellXY+1),hl    
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+3*4 + 2) : ld (heroPixelCoords+1),hl    
+    ret
+7:  
+    ;нет четвертой, значит в первую
+    ; телепортируемся во первую дверь
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4 + 0) : ld (heroCellXY+1),hl    
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4 + 2) : ld (heroPixelCoords+1),hl      
+    ret
+1:
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+3*4)
+    ld a,(heroCellXY+1) : cp l : ret nz
+    ld a,(heroCellXY+2) : cp h : ret nz
+    ; телепортируемся во первую дверь
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4 + 0) : ld (heroCellXY+1),hl    
+    ld hl,(map+MAP_WIDTH*MAP_HEIGHT+15+0*4 + 2) : ld (heroPixelCoords+1),hl    
+    ret

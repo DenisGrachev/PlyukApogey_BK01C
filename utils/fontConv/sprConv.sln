@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.35026.282
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sprConv", "sprConv\sprConv.csproj", "{F2225342-2CB3-4872-9027-1696ECDAFD5D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2225342-2CB3-4872-9027-1696ECDAFD5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2225342-2CB3-4872-9027-1696ECDAFD5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2225342-2CB3-4872-9027-1696ECDAFD5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2225342-2CB3-4872-9027-1696ECDAFD5D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4BE5A817-C93A-46C1-9429-D632E2C3BF8A}
+	EndGlobalSection
+EndGlobal

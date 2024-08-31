@@ -1,0 +1,72 @@
+
+
+
+resetCamera:
+    xor a : ld (scrollY+1),a : ld (targetY+1),a
+    call resetGPU
+    ret
+
+;у скролла значения от 0-32
+;0-32
+
+doCamera:
+;		ld a,0 : inc a : and 7 : ld (doCamera+1),a
+;		or a : jp nz,1f
+    
+    ;вычисляем линию к которой надо устремить скролл
+    ld h,high cameraDeltaLUT : ld a,(heroPixelCoords+2)    
+    ld l,a : ld a,(hl)
+    ld (targetY+1),a
+1:    
+
+    xor a
+scrollY:
+    ld a,0
+targetY:    
+    cp 0
+    jp z,endCameraMove
+    jp nc,3f
+    inc a
+    ld (scrollY+1),a
+    jp endCameraMove
+3:
+    dec a
+    ld (scrollY+1),a
+endCameraMove:
+
+    ; патчим адрес видео памяти
+    ld h,high cameraLUT : add a,a : ld l,a    
+    ld a,(hl) : inc l : ld h,(hl) : ld l,a    
+    ld (videoADDR+1),hl
+    ret
+
+    align 256
+cameraLUT:
+N=0
+    dup 32
+    dw VIDEOMEM_ADDR+N*WIDTH        
+N=N+1    
+    edup    
+
+//192 div 6 = 32
+    align 256
+cameraDeltaLUT:
+     dup 64
+     db 0
+     edup
+
+N=0     
+     dup 64
+     db N/2
+N=N+1     
+     edup
+     
+     dup 64
+     db 31
+     edup
+;N=0
+;    dup 192    
+;    db N/6    
+;N=N+1    
+;    edup    
+    block 64,0

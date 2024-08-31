@@ -1,0 +1,191 @@
+
+
+;цвет 10XXGBXR
+;       ||  |
+;       ||   мигание
+;       | негативное изображение
+;       |
+;        подчеркивание
+
+
+g = 10000101b
+r = 10001100b
+b = 10001001b
+w = 10000000b
+c = 10000001b
+m = 10001000b
+n = 10001101b
+
+y = 10000100b
+
+
+LEFT_CHARS = 8
+HEIGHT = 64
+WIDTH = 94-6-4
+VG75_ADDR = 0EF00h
+VT57_ADDR = 0F000h
+;VIDEOMEM_ADDR = 08000h
+VIDEOMEM_SIZE = WIDTH*HEIGHT
+
+delay:
+;Ждём луч
+	push af
+	call waitRaster	
+	pop af
+	dec a : jp nz,delay
+	ret
+
+waitRaster:
+        ; Ждем обратный ход
+		ld hl, VG75_ADDR+1
+		ld a, (hl)
+wait1:	ld a, (hl)
+		and 20h
+		jp z, wait1
+		
+    ret
+
+initVideo:
+		ld hl,VIDEOMEM_ADDR_2 : ld (videoADDR+1),hl
+		 call prepareVideoMem
+        ; Ждем луча        
+         call waitRaster
+
+        ; Выключаем видео и устаналиваем режим 
+		;стоп видео
+		ld hl, VG75_ADDR+1
+		ld (hl), 0
+		dec hl
+		ld (hl), 78-1     ; 78 символов
+		ld (hl),  HEIGHT-1	; 64 линии		
+		;ld (hl), $7f; HEIGHT-1	; 64 линии		
+		ld (hl), 00110011b; Высота символа 4
+		;ld (hl), $33;00110011b Высота символа 4
+		ld (hl),$13 ;доп настройки
+
+		;Убираем куросчик
+		inc hl
+		ld (hl),0x80 ; команда Установка курсора
+		dec hl
+;cursorPosition:		
+;		ld de,8+8*256
+;		ld (hl),d
+;		ld (hl),e
+		ld (hl),8
+		ld (hl),10
+
+		; Включаем видео
+		ld hl, VG75_ADDR+1
+		ld (hl), 22h
+
+		; ПДП
+        ; Устаналиваем положение и размер видеопамяти
+
+		call waitRaster
+
+		; Стоп ПДП
+        ld hl, VT57_ADDR+8
+		ld (hl), 80h
+
+        ld l, 4
+		ld (hl), VIDEOMEM_ADDR_2 & 0xFF
+		ld (hl), VIDEOMEM_ADDR_2 >> 8
+ 	
+        inc l
+		ld (hl), (VIDEOMEM_SIZE-1) & 0xFF
+		ld (hl), 40h | ((VIDEOMEM_SIZE-1) >> 8)
+
+  		; Включаем ПДП
+		ld hl, VT57_ADDR+8
+		ld (hl), 0A4h	
+
+		; Включаем альт чарсет Апогея
+		ei
+		; Очищаем видеопамять
+;		ld hl, VIDEOMEM_ADDR
+;		ld bc, VIDEOMEM_SIZE
+;		ld a, 0
+;clearMem:	ld (hl), a
+;		inc hl
+;		dec c		
+;		jp nz, clearMem
+;		dec b
+;		jp nz, clearMem
+
+;		call fillVideo	  
+
+        ret    
+
+applyCursor:
+		;Убираем куросчик
+		ld hl, VG75_ADDR+1
+		ld (hl),0x80 ; команда Установка курсора
+		dec hl
+cursorPosition:		
+		ld de,8+8*256
+		ld (hl),e
+		ld (hl),d
+		ret
+
+resetGPU:
+	ld hl,VIDEOMEM_ADDR : ld (videoADDR+1),hl
+	ret
+
+;0-32
+applyGPU:		
+		;стоп видео
+		;ld hl, VG75_ADDR+1
+		;ld (hl), 0		
+
+		; Стоп ПДП
+        ld hl, VT57_ADDR+8
+		ld (hl), 80h
+
+		ld hl, VT57_ADDR+4
+videoADDR:	ld de,VIDEOMEM_ADDR_2
+
+	;	dec de
+	;	dec de
+
+		ld (hl),e
+		ld (hl),d		
+	  ; Включаем ПДП
+		ld hl, VT57_ADDR+8
+		ld (hl), 0A4h	
+
+		ret
+
+enableRender:
+		;call waitRaster
+		;ld hl, VG75_ADDR+1
+		;ld (hl), 23h
+	  ; Включаем ПДП
+	;	ld hl, VT57_ADDR+8
+	;	ld (hl), 0A4h	
+
+		;call waitRaster
+		; Включаем видео
+		;ld hl, VG75_ADDR+1
+		;ld (hl), 23h
+		
+		ret		
+
+disableRender:	
+		call waitRaster
+ 		; Выключаем видео и устаналиваем режим 
+		;стоп видео
+	;	ld hl, VG75_ADDR+1
+	;	ld (hl), 0
+
+		ld hl,VIDEOMEM_ADDR_2 : ld (videoADDR+1),hl : jp applyGPU
+;	    ld hl, VT57_ADDR+8
+;		ld (hl), 80h
+;
+;		ld hl, VT57_ADDR+4
+;		ld de,VIDEOMEM_ADDR;+96*WIDTH
+;		ld (hl),e
+;		ld (hl),d		
+;	  ; Включаем ПДП
+;		ld hl, VT57_ADDR+8
+;		ld (hl), 0A4h	
+		ret

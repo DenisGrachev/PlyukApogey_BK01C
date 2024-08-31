@@ -1,0 +1,74 @@
+initIntro:
+    ;отрисуем меню заранее на скрытый экран
+    ld de,menuTileSet : call setTileSet
+;    ld hl,menuMap : call drawMapInternal    
+    ld de,menuMap : ld bc,map : call dzx0
+    ld hl,map : call drawMapInternal
+    ;========================================
+    IFNDEF MUTE_MUSIC3
+    ld hl,introMusic : call mus_init0
+    ENDIF
+	  ld a,GS_INTRO : ld (gameState),a	    
+    ld hl,cursorDance : ld (dancePointer+1),hl
+    ld hl,00000 : ld (mus_frame+1),hl
+    jp mainLoop
+
+doIntro:
+
+dancePointer:
+    ld hl,cursorDance : ld e,(hl) : inc hl : ld d,(hl)
+mus_frame:
+		ld hl,00000 : inc hl : ld (mus_frame+1),hl    
+        dec hl
+		ld a,l : cp e : jp nz,1f
+		ld a,h : cp d : jp nz,1f
+
+        ld hl,(dancePointer+1) : inc hl : inc hl
+        ld a,(hl) : ld (cursorPosition+1),a : inc hl
+        ld a,(hl) : ld (cursorPosition+2),a : inc hl
+        ld (dancePointer+1),hl
+        push af : call applyCursor : pop af
+        cp 255 : jp z,initMenu		
+1:    
+    IFNDEF MUTE_MUSIC3
+    call mus_play
+    ENDIF
+
+     ;Назад в царь цикл	
+    jp mainLoop
+
+
+cursorDance:
+;фрейм х у
+
+  ;dw 1 : db 255,255
+
+N=0
+  dup 6
+  dw 24*N : db 10+N*3,10
+N=N+1  
+  edup
+
+K=0
+  dup 3  
+  dw 24*N-12 : db 10+N*3+K*2,10
+K=K+1
+  dw 24*N : db 10+N*3+K*2,10
+N=N+1  
+  edup
+
+N1=0
+  dup 6
+  dw 24*N+N1*24 : db 10+N*3,10+N1*4
+N1=N1+1  
+  edup
+
+    dw 24*N+N1*24 : db 255,10+N1*4
+
+    
+
+
+    dw 384 : db 255,255
+
+introMusic:	
+	incbin "music\music0.psg.pack"	    
